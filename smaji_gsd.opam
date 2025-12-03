@@ -1,0 +1,19 @@
+opam-version: "2.0"
+maintainer: "zandoye@gmail.com"
+authors: [ "ZAN DoYe" ]
+homepage: "https://github.com/smaji-org/smaji_gsd/"
+bug-reports: "https://github.com/smaji-org/smaji_gsd/issues"
+license: "GPLv2"
+dev-repo: "git+https://https://github.com/smaji-org/smaji_gsd"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "ocaml" {>= "4.08.1"}
+  "dune" {>= "1.6.0"}
+  "smaji_glyph_path"
+]
+synopsis: "glyph stroke description lang (gsd) manipulation library"
+description: """
+A library to analyze, reform, compose gsd
+"""

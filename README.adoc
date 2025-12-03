@@ -1,0 +1,4 @@
+= Glyph Stroke Description
+
+Smaji GSD is a markup language, an XML schema, used to record glyph accurately.
+

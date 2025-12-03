@@ -1,0 +1,10 @@
+(include_subdirs unqualified)
+
+(library
+  (name smaji_gsd)
+  (public_name smaji_gsd)
+  (libraries smaji_glyph_path)
+  (flags (:standard -safe-string))
+  (preprocess (pps ppx_pipebang))
+  )
+

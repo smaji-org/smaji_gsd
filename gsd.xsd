@@ -1,0 +1,893 @@
+<?xml version="1.0"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  targetNamespace="http://cjkv.smaji.org/ns/gsd"
+  xmlns="http://cjkv.smaji.org/ns/gsd"
+  elementFormDefault="qualified">
+
+<xs:simpleType name="transform">
+  <xs:restriction base="xs:string">
+    <xs:enumeration value="none"/>
+    <xs:enumeration value="mirror_horizontal"/>
+    <xs:enumeration value="mirror_vertical"/>
+    <xs:enumeration value="rotate180"/>
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="unicode">
+  <xs:annotation>
+    <xs:documentation>
+      unicode code point
+    </xs:documentation>
+  </xs:annotation>
+  <xs:restriction base="xs:string">
+    <xs:pattern value="[a-fA-F\d]+(,[a-fA-F\d]+)?"/>
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="framePosAttrType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="0"/>
+    <xs:maxInclusive value="127"/>
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="frameSizeAttrType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="1"/>
+    <xs:maxInclusive value="128"/>
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:attributeGroup name="frameAttrs">
+  <xs:annotation>
+    <xs:documentation>
+      frame attributes common to most elements
+      x: axis
+      y: axis
+      width: width of the element
+      height: height of the element
+    </xs:documentation>
+  </xs:annotation>
+  <xs:attribute name="x" type="framePosAttrType" use="required"/>
+  <xs:attribute name="y" type="framePosAttrType" use="required"/>
+  <xs:attribute name="width" type="frameSizeAttrType" use="required"/>
+  <xs:attribute name="height" type="frameSizeAttrType" use="required"/>
+</xs:attributeGroup>
+
+<xs:complexType name="alias">
+  <xs:attribute name="unicode" type="unicode" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="ref">
+  <xs:attribute name="unicode" type="unicode" use="required"/>
+  <xs:attributeGroup ref="frameAttrs" />
+</xs:complexType>
+
+<xs:complexType name="character">
+  <xs:attribute name="utf8" type="xs:string" use="required"/>
+  <xs:attributeGroup ref="frameAttrs" />
+</xs:complexType>
+
+<xs:simpleType name="stroke_name">
+  <xs:annotation>
+    <xs:documentation>
+      h     | Horizontal
+      sh    | Slanted Horizontal
+      u     | Upward horizontal
+      du    | Dot – Upward horizontal
+      v     | Vertical
+      sv    | Slanted Vertical
+      rsv   | Right Slanted Vertical
+      t     | Throw
+      ft    | Flat Throw
+      wt    | Wilted Throw
+      d     | Dot
+      ed    | Extended Dot
+      ld    | Left Dot
+      wd    | Wilted Dot
+      p     | Press
+      up    | Upward horizontal – Press
+      hp    | Horizontal – Press
+      fp    | Flat Press
+      ufp   | Upward horizontal – Flat Press
+      c     | Clockwise curve
+      a     | Anticlockwise curve
+      o     | Oval
+      hj    | Horizontal – J hook
+      uj    | Upward horizontal – J hook
+      ht    | Horizontal – Throw
+      hsv   | Horizontal – Slanted Vertical
+      hv    | Horizontal – Vertical
+      hvj   | Horizontal – Vertical – J hook
+      htj   | Horizontal – Throw – J hook
+      utj   | Upward horizontal – Throw – J hook
+      hvh   | Horizontal – Vertical – Horizontal
+      hvu   | Horizontal – Vertical – Upward horizontal
+      ha    | Horizontal – Anticlockwise curve
+      haj   | Horizontal – Anticlockwise curve – J hook
+      hpj   | Horizontal – Press – J hook
+      htaj  | Horizontal – Throw – Anticlockwise curve – J hook
+      htc   | Horizontal – Throw – Clockwise curve
+      htht  | Horizontal – Throw – Horizontal – Throw
+      htcj  | Horizontal – Throw – Clockwise curve – J hook
+      hvhv  | Horizontal – Vertical – Horizontal – Vertical
+      hthtj | Horizontal – Throw – Horizontal – Throw – J hook
+      vu    | Vertical – Upward horizontal
+      vh    | Vertical – Horizontal
+      va    | Vertical – Anticlockwise curve
+      vaj   | Vertical – Anticlockwise curve – J hook
+      vhv   | Vertical – Horizontal – Vertical
+      vht   | Vertical – Horizontal – Throw
+      vhtj  | Vertical – Horizontal – Throw – J hook
+      vj    | Vertical – J hook
+      vc    | Vertical – Clockwise curve
+      vcj   | Vertical – Clockwise curve – J hook
+      tu    | Throw – Upward horizontal
+      th    | Throw – Horizontal
+      td    | Throw – Dot
+      wtd   | Wilted Throw – Dot
+      tht   | Throw – Horizontal – Throw
+      thtj  | Throw – Horizontal – Throw – J hook
+      tj    | Throw – J hook
+      cj    | Clockwise curve – J hook
+      fpj   | Flat Press – J hook
+      pj    | Press – J hook
+      thtaj | Throw – Horizontal – Throw – Anticlockwise curve – J hook
+      tod   | Throw – Oval – Dot
+    </xs:documentation>
+  </xs:annotation>
+  <xs:restriction base="xs:string">
+    <xs:enumeration value="a"/>
+    <xs:enumeration value="cj"/>
+    <xs:enumeration value="c"/>
+    <xs:enumeration value="d"/>
+    <xs:enumeration value="du"/>
+    <xs:enumeration value="ed"/>
+    <xs:enumeration value="fpj"/>
+    <xs:enumeration value="fp"/>
+    <xs:enumeration value="ft"/>
+    <xs:enumeration value="haj"/>
+    <xs:enumeration value="ha"/>
+    <xs:enumeration value="hj"/>
+    <xs:enumeration value="hpj"/>
+    <xs:enumeration value="hp"/>
+    <xs:enumeration value="h"/>
+    <xs:enumeration value="hsv"/>
+    <xs:enumeration value="htaj"/>
+    <xs:enumeration value="htcj"/>
+    <xs:enumeration value="htc"/>
+    <xs:enumeration value="hthtj"/>
+    <xs:enumeration value="htht"/>
+    <xs:enumeration value="htj"/>
+    <xs:enumeration value="ht"/>
+    <xs:enumeration value="hvh"/>
+    <xs:enumeration value="hvhv"/>
+    <xs:enumeration value="hvj"/>
+    <xs:enumeration value="hv"/>
+    <xs:enumeration value="hvu"/>
+    <xs:enumeration value="ld"/>
+    <xs:enumeration value="o"/>
+    <xs:enumeration value="pj"/>
+    <xs:enumeration value="p"/>
+    <xs:enumeration value="rsv"/>
+    <xs:enumeration value="sh"/>
+    <xs:enumeration value="sv"/>
+    <xs:enumeration value="td"/>
+    <xs:enumeration value="th"/>
+    <xs:enumeration value="thtaj"/>
+    <xs:enumeration value="thtj"/>
+    <xs:enumeration value="tht"/>
+    <xs:enumeration value="tj"/>
+    <xs:enumeration value="tod"/>
+    <xs:enumeration value="t"/>
+    <xs:enumeration value="tu"/>
+    <xs:enumeration value="ufp"/>
+    <xs:enumeration value="uj"/>
+    <xs:enumeration value="up"/>
+    <xs:enumeration value="u"/>
+    <xs:enumeration value="utj"/>
+    <xs:enumeration value="vaj"/>
+    <xs:enumeration value="va"/>
+    <xs:enumeration value="vcj"/>
+    <xs:enumeration value="vc"/>
+    <xs:enumeration value="vh"/>
+    <xs:enumeration value="vhtj"/>
+    <xs:enumeration value="vht"/>
+    <xs:enumeration value="vhv"/>
+    <xs:enumeration value="vj"/>
+    <xs:enumeration value="v"/>
+    <xs:enumeration value="vu"/>
+    <xs:enumeration value="wd"/>
+    <xs:enumeration value="wtd"/>
+    <xs:enumeration value="wt"/>
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:complexType name="point">
+  <xs:annotation>
+    <xs:documentation>
+      coordinate point
+    </xs:documentation>
+  </xs:annotation>
+  <xs:attribute name="x" type="xs:decimal" use="required"/>
+  <xs:attribute name="y" type="xs:decimal" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="point_adjust">
+  <xs:annotation>
+    <xs:documentation>
+      coordinate point adjust
+    </xs:documentation>
+  </xs:annotation>
+  <xs:choice>
+    <xs:element name="point" type="point"/>
+    <xs:element name="auto"/>
+  </xs:choice>
+</xs:complexType>
+
+<xs:complexType name="length">
+  <xs:annotation>
+    <xs:documentation>
+      coordinate point
+    </xs:documentation>
+  </xs:annotation>
+  <xs:attribute name="is" type="xs:decimal" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="length_adjust">
+  <xs:annotation>
+    <xs:documentation>
+      coordinate length adjust
+    </xs:documentation>
+  </xs:annotation>
+  <xs:choice>
+    <xs:element name="length" type="length"/>
+    <xs:element name="auto"/>
+  </xs:choice>
+</xs:complexType>
+
+<!-- begin stroke types -->
+  <xs:complexType name="stroke_h">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_sh">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_u">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_du">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="dot" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_v">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_sv">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="width" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_rsv">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="width" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_t">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_ft">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_wt">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length_adjust"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_d">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_ed">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_ld">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_wd">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_p">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_up">
+    <xs:sequence>
+      <xs:element name="start" type="point_adjust"/>
+      <xs:element name="p_start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hp">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_fp">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_ufp">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="p_start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_c">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="width" type="length"/>
+      <xs:element name="ctrl1" type="length_adjust"/>
+      <xs:element name="ctrl2" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_a">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="width" type="length"/>
+      <xs:element name="ctrl1" type="length_adjust"/>
+      <xs:element name="ctrl2" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_o">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="width" type="length"/>
+      <xs:element name="ctrl_h" type="length_adjust"/>
+      <xs:element name="ctrl_v" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_uj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="u_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_ht">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hsv">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hv">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="v_length" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hvj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="v_length" type="length_adjust"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_htj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_utj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="t_start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hvh">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h2_length" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hvu">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_ha">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h2_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_haj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h2_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hpj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="p_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_htaj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="h2_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_htc">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="t_ctrl1" type="point_adjust"/>
+      <xs:element name="t_ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="c_ctrl1" type="point_adjust"/>
+      <xs:element name="c_ctrl2" type="point_adjust"/>
+      <xs:element name="c_end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_htht">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="t1_ctrl1" type="point_adjust"/>
+      <xs:element name="t1_ctrl2" type="point_adjust"/>
+      <xs:element name="t1_end" type="point"/>
+      <xs:element name="h2_length" type="length"/>
+      <xs:element name="t2_ctrl1" type="point_adjust"/>
+      <xs:element name="t2_ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_htcj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="t_ctrl1" type="point_adjust"/>
+      <xs:element name="t_ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="c_ctrl1" type="point_adjust"/>
+      <xs:element name="c_ctrl2" type="point_adjust"/>
+      <xs:element name="c_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hvhv">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="v1_length" type="length"/>
+      <xs:element name="h2_length" type="length"/>
+      <xs:element name="v2_length" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_hthtj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="t1_ctrl1" type="point_adjust"/>
+      <xs:element name="t1_ctrl2" type="point_adjust"/>
+      <xs:element name="t1_end" type="point"/>
+      <xs:element name="h2_length" type="length"/>
+      <xs:element name="t2_ctrl1" type="point_adjust"/>
+      <xs:element name="t2_ctrl2" type="point_adjust"/>
+      <xs:element name="t2_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vu">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vh">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_va">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vaj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vhv">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v1_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="v2_length" type="length"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vht">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vhtj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vc">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_vcj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length"/>
+      <xs:element name="h_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_tu">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_th">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="length" type="length_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_td">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_wtd">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="v_length" type="length_adjust"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_tht">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="t1_ctrl1" type="point_adjust"/>
+      <xs:element name="t1_ctrl2" type="point_adjust"/>
+      <xs:element name="t1_end" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="t2_ctrl1" type="point_adjust"/>
+      <xs:element name="t2_ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_thtj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="t1_ctrl1" type="point_adjust"/>
+      <xs:element name="t1_ctrl2" type="point_adjust"/>
+      <xs:element name="t1_end" type="point"/>
+      <xs:element name="length" type="length"/>
+      <xs:element name="t2_ctrl1" type="point_adjust"/>
+      <xs:element name="t2_ctrl2" type="point_adjust"/>
+      <xs:element name="t2_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_tj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_cj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_fpj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_pj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t_end" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_thtaj">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="t1_end" type="point"/>
+      <xs:element name="h1_length" type="length"/>
+      <xs:element name="t2_end" type="point"/>
+      <xs:element name="h2_length" type="length"/>
+      <xs:element name="a_radius" type="length_adjust"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="stroke_tod">
+    <xs:sequence>
+      <xs:element name="start" type="point"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="length_adjust"/>
+      <xs:element name="bottom" type="point"/>
+      <xs:element name="ctrl3" type="length_adjust"/>
+      <xs:element name="ctrl4" type="length_adjust"/>
+      <xs:element name="left" type="point"/>
+      <xs:element name="end" type="point_adjust"/>
+    </xs:sequence>
+  </xs:complexType>
+<!-- end stroke types -->
+
+<xs:complexType name="stroke">
+  <xs:choice>
+    <xs:element name="h" type="stroke_h"/>
+    <xs:element name="sh" type="stroke_sh"/>
+    <xs:element name="u" type="stroke_u"/>
+    <xs:element name="du" type="stroke_du"/>
+    <xs:element name="v" type="stroke_v"/>
+    <xs:element name="sv" type="stroke_sv"/>
+    <xs:element name="rsv" type="stroke_rsv"/>
+    <xs:element name="t" type="stroke_t"/>
+    <xs:element name="ft" type="stroke_ft"/>
+    <xs:element name="wt" type="stroke_wt"/>
+    <xs:element name="d" type="stroke_d"/>
+    <xs:element name="ed" type="stroke_ed"/>
+    <xs:element name="ld" type="stroke_ld"/>
+    <xs:element name="wd" type="stroke_wd"/>
+    <xs:element name="p" type="stroke_p"/>
+    <xs:element name="up" type="stroke_up"/>
+    <xs:element name="hp" type="stroke_hp"/>
+    <xs:element name="fp" type="stroke_fp"/>
+    <xs:element name="ufp" type="stroke_ufp"/>
+    <xs:element name="c" type="stroke_c"/>
+    <xs:element name="a" type="stroke_a"/>
+    <xs:element name="o" type="stroke_o"/>
+    <xs:element name="hj" type="stroke_hj"/>
+    <xs:element name="uj" type="stroke_uj"/>
+    <xs:element name="ht" type="stroke_ht"/>
+    <xs:element name="hsv" type="stroke_hsv"/>
+    <xs:element name="hv" type="stroke_hv"/>
+    <xs:element name="hvj" type="stroke_hvj"/>
+    <xs:element name="htj" type="stroke_htj"/>
+    <xs:element name="utj" type="stroke_utj"/>
+    <xs:element name="hvh" type="stroke_hvh"/>
+    <xs:element name="hvu" type="stroke_hvu"/>
+    <xs:element name="ha" type="stroke_ha"/>
+    <xs:element name="haj" type="stroke_haj"/>
+    <xs:element name="hpj" type="stroke_hpj"/>
+    <xs:element name="htaj" type="stroke_htaj"/>
+    <xs:element name="htc" type="stroke_htc"/>
+    <xs:element name="htht" type="stroke_htht"/>
+    <xs:element name="htcj" type="stroke_htcj"/>
+    <xs:element name="hvhv" type="stroke_hvhv"/>
+    <xs:element name="hthtj" type="stroke_hthtj"/>
+    <xs:element name="vu" type="stroke_vu"/>
+    <xs:element name="vh" type="stroke_vh"/>
+    <xs:element name="va" type="stroke_va"/>
+    <xs:element name="vaj" type="stroke_vaj"/>
+    <xs:element name="vhv" type="stroke_vhv"/>
+    <xs:element name="vht" type="stroke_vht"/>
+    <xs:element name="vhtj" type="stroke_vhtj"/>
+    <xs:element name="vj" type="stroke_vj"/>
+    <xs:element name="vc" type="stroke_vc"/>
+    <xs:element name="vcj" type="stroke_vcj"/>
+    <xs:element name="tu" type="stroke_tu"/>
+    <xs:element name="th" type="stroke_th"/>
+    <xs:element name="td" type="stroke_td"/>
+    <xs:element name="wtd" type="stroke_wtd"/>
+    <xs:element name="tht" type="stroke_tht"/>
+    <xs:element name="thtj" type="stroke_thtj"/>
+    <xs:element name="tj" type="stroke_tj"/>
+    <xs:element name="cj" type="stroke_cj"/>
+    <xs:element name="fpj" type="stroke_fpj"/>
+    <xs:element name="pj" type="stroke_pj"/>
+    <xs:element name="thtaj" type="stroke_thtaj"/>
+    <xs:element name="tod" type="stroke_tod"/>
+  </xs:choice>
+</xs:complexType>
+
+<xs:complexType name="glyph">
+  <xs:choice maxOccurs="unbounded">
+    <xs:element name="stroke" type="stroke"/>
+    <xs:element name="ref" type="ref"/>
+    <xs:element name="character" type="character"/>
+  </xs:choice>
+  <xs:attribute name="unicode" type="unicode" use="required"/>
+  <xs:attribute name="transform" type="transform" use="optional"/>
+</xs:complexType>
+
+<xs:element name="gsd">
+  <xs:complexType>
+    <xs:choice>
+      <xs:element name="glyph" type="glyph"/>
+      <xs:element name="alias" type="alias"/>
+    </xs:choice>
+    <xs:attribute name="version" type="xs:string" use="required"/>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>
