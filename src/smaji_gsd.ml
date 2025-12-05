@@ -1748,53 +1748,52 @@ let outline_svg_of_gsd ?padding ?weight gsd=
   let rec svg_of_gsd ?(indent=0) ?(pos_ratio=pos_ratio_default) gsd=
     let indent_str0= String.make indent ' '
     and indent_str1= String.make (indent+2) ' ' in
-    let elements= ListLabels.map gsd.elements
-      ~f:(fun element->
-        match element with
-        | Stroke fstroke->
-          let fstroke= { fstroke with
-            sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
-          }
-          in
-          fstroke
-            |> fstroke_to_stroke
-            |> Stroke.to_path
-            |> Svg.Svg_path.sub_of_path
-            |> Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(indent+2)
-            |> fun cmd-> sprintf "%s<path fill=\"none\" d=\"\n%s\n%s\"\n%s/>"
-              indent_str0
-              cmd
-              indent_str1
-              indent_str0
-        | SubGsd subgsd->
-          let size= calc_size subgsd.gsd in
-          let ratio= {
-            ratio_x= subgsd.gframe.width /. size.width;
-            ratio_y= subgsd.gframe.height /. size.height;
-          } in
-          let ratio_final= {
-            ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
-            ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
-          } in
-          let pos_x=
-            subgsd.gframe.x
-              *. pos_ratio.ratio.ratio_x
-              +. pos_ratio.pos.pos_x
-          and pos_y=
-            subgsd.gframe.y
-              *. pos_ratio.ratio.ratio_y
-              +. pos_ratio.pos.pos_y
-          in
-          let pos_ratio= {
-            pos= {pos_x; pos_y};
-            ratio= ratio_final;
-          } in
-          let indent=
-            match gsd.transform with
-            | NoTransform-> indent
-            | _-> indent + 2
-          in
-          svg_of_gsd ~indent ~pos_ratio subgsd.gsd)
+    let elements= ListLabels.map gsd.elements ~f:(fun element->
+      match element with
+      | Stroke fstroke->
+        let fstroke= { fstroke with
+          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+        }
+        in
+        fstroke
+          |> fstroke_to_stroke
+          |> Stroke.to_path
+          |> Svg.Svg_path.sub_of_path
+          |> Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(indent+2)
+          |> fun cmd-> sprintf "%s<path fill=\"none\" d=\"\n%s\n%s\"\n%s/>"
+            indent_str0
+            cmd
+            indent_str1
+            indent_str0
+      | SubGsd subgsd->
+        let size= calc_size subgsd.gsd in
+        let ratio= {
+          ratio_x= subgsd.gframe.width /. size.width;
+          ratio_y= subgsd.gframe.height /. size.height;
+        } in
+        let ratio_final= {
+          ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
+          ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
+        } in
+        let pos_x=
+          subgsd.gframe.x
+            *. pos_ratio.ratio.ratio_x
+            +. pos_ratio.pos.pos_x
+        and pos_y=
+          subgsd.gframe.y
+            *. pos_ratio.ratio.ratio_y
+            +. pos_ratio.pos.pos_y
+        in
+        let pos_ratio= {
+          pos= {pos_x; pos_y};
+          ratio= ratio_final;
+        } in
+        let indent=
+          match gsd.transform with
+          | NoTransform-> indent
+          | _-> indent + 2
+        in
+        svg_of_gsd ~indent ~pos_ratio subgsd.gsd)
     in
     let elements_str= String.concat "\n" elements in
 
@@ -1851,10 +1850,6 @@ let outline_svg_of_gsd ?padding ?weight gsd=
       weight
       svg_str
   | _-> failwith (sprintf "outline_svg_of_gsd %d %d" gsd.version_major gsd.version_minor)
-
-type glif_of_gsd=
-  | Glif of Glif.t
-  | Wrapped of { wrap: Glif.t; content: Glif.t }
 
 module StrokeMap= Map.Make(Stroke.Tag)
 
@@ -2309,141 +2304,58 @@ let stroke_samples=
     stroke_samples
 *)
 
-(*
-let convert_to_glif_glyphs glyphs=
-  glyphs |> StrokeMap.map Smaji_glyph_path.glif_of_svg_exn
-
-let svg_of_stroke ~stroke_glyph stroke=
-  let svg: Svg.t= StrokeMap.find stroke.stroke_type stroke_glyph in
-  let x=
-    (float_of_int stroke.frame.width) /.
-    svg.viewBox.width
-  and y=
-    (float_of_int stroke.frame.height) /.
-    svg.viewBox.height
-  and dx= float_of_int stroke.frame.x
-  and dy= float_of_int stroke.frame.y in
-  svg
-    |> Smaji_glyph_path.Svg.Adjust.scale ~x ~y
-    |> Smaji_glyph_path.Svg.Adjust.translate ~dx ~dy
-
-let paths_of_stroke ~stroke_glyph stroke=
-  let svg= svg_of_stroke ~stroke_glyph stroke in
-  svg.paths
-
-let svg_of_gsd ~stroke_glyph gsd=
-  let viewBox= Smaji_glyph_path.Svg.ViewBox.{ min_x= 0.; min_y= 0.; width= 0.; height= 0.; }
-  and paths= gsd
-    |> gsd_flatten
-    |> List.map (paths_of_stroke ~stroke_glyph)
-    |> List.concat
-  in
-  let svg= Smaji_glyph_path.Svg.{ viewBox; paths } in
-  Smaji_glyph_path.Svg.Adjust.viewBox_fitFrame_reset svg
-
-let outline_svg_of_gsd ~stroke_glyph gsd=
-  let size= calc_size gsd in
-  let rec svg_of_gsd ?(indent=0) gsd=
-    let indent_str0= String.make indent ' '
-    and indent_str1= String.make (indent+2) ' '
-    and indent_str2= String.make (indent+4) ' ' in
-    let elements= ListLabels.map gsd.elements
-      ~f:(fun element->
-        match element with
-        | Stroke stroke->
-          let gsdSvg:Svg.t= StrokeMap.find stroke.stroke_type stroke_glyph in
-          let dx= float_of_int stroke.frame.x -. gsdSvg.viewBox.min_x
-          and dy= float_of_int stroke.frame.y -. gsdSvg.viewBox.min_y
-          and rx= float_of_int stroke.frame.width /. gsdSvg.viewBox.width
-          and ry= float_of_int stroke.frame.height /. gsdSvg.viewBox.height in
-          let translate=
-            if dx <> 0. || dy <> 0.
-            then sprintf "translate(%s %s)" (string_of_float dx) (string_of_float dy)
-            else ""
-          in
-          let scale=
-            if rx <> 1. || ry <> 1.
-            then sprintf "scale(%s %s)" (string_of_float rx) (string_of_float ry)
-            else ""
-          in
-          let transform=
-            if translate <> "" || scale <> ""
-            then sprintf {|transform="%s"|} (String.concat " " [translate; scale])
-            else ""
-          in
-          let paths=
-            let paths_svg= gsdSvg.paths
-              |> List.map (Svg.Svg_path.to_string_svg ~indent:(indent+6))
-              |> String.concat "\n"
-            in
-            sprintf "%s<path d=\"%s\"\n%s/>" indent_str2 paths_svg indent_str2
-          in
-          sprintf "%s<g %s>\n%s\n%s</g>"
-            indent_str1 transform
-            paths
-            indent_str1
-        | SubGod subgsd->
-          let size= calc_size subgsd.gsd in
-          let dx= float_of_int subgsd.frame.x
-          and dy= float_of_int subgsd.frame.y
-          and rx= float_of_int subgsd.frame.width /. float_of_int size.width
-          and ry= float_of_int subgsd.frame.height /. float_of_int size.height in
-          let translate=
-            sprintf "translate(%s %s)" (string_of_float dx) (string_of_float dy)
-          in
-          let scale=
-            if rx <> 1. || ry <> 1.
-            then sprintf "scale(%s %s)" (string_of_float rx) (string_of_float ry)
-            else ""
-          in
-          let transform=
-            if translate <> "" || scale <> ""
-            then sprintf {|transform="%s"|} (String.concat " " [translate; scale])
-            else ""
-          in
-          let subgsd_str= svg_of_gsd ~indent:(indent+2+2) subgsd.gsd in
-          (sprintf "%s<g %s>\n%s\n%s</g>"
-            indent_str1 transform
-            subgsd_str
-            indent_str1)
-          )
-    in
-    let elements_str= String.concat "\n" elements in
-    let transform=
-      let x= sprintf "translate(%d 0)"
-        (- size.width )
-      and y= sprintf "translate(0 %d)"
-        (- size.height)
-      in
-      (match gsd.transform with
-      | NoTransform-> []
-      | MirrorHorizontal-> ["scale(-1 1)"; x]
-      | MirrorVertical-> ["scale(1 -1)"; y]
-      | Rotate180-> ["scale(-1 -1)"; x; y])
-        |> String.concat " "
-        |> sprintf {|transform="%s"|}
-    in
-    sprintf "%s<g %s>\n%s\n%s</g>"
-      indent_str0
-      transform
-      elements_str
-      indent_str0
-  in
-  match gsd.version_major, gsd.version_minor with
-  | (1, 0) ->
-    let asvg= svg_of_gsd ~indent:2 gsd in
-    sprintf
-      "<svg viewBox=\"0,0 %d,%d\" xmlns=\"http://www.w3.org/2000/svg\">\n%s\n</svg>"
-      size.width size.height asvg
-  | _-> failwith (sprintf "outline_svg_of_gsd %d %d" gsd.version_major gsd.version_minor)
-
 type glif_of_gsd=
   | Glif of Glif.t
   | Wrapped of { wrap: Glif.t; content: Glif.t }
 
-let outline_glif_of_gsd ~stroke_glyph gsd=
-  let size= calc_size gsd in
+let outline_glif_of_gsd gsd=
+  let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
+    let elements= ListLabels.map gsd.elements ~f:(fun element->
+      match element with
+      | Stroke fstroke->
+        let fstroke= { fstroke with
+          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+        }
+        in
+        let points=
+          fstroke
+            |> fstroke_to_stroke
+            |> Stroke.to_path
+            |> Glif.points_of_path
+        in
+        [Glif.Contour {
+          identifier= None;
+          points;
+        }]
+      | SubGsd subgsd->
+        let size= calc_size subgsd.gsd in
+        let ratio= {
+          ratio_x= subgsd.gframe.width /. size.width;
+          ratio_y= subgsd.gframe.height /. size.height;
+        } in
+        let ratio_final= {
+          ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
+          ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
+        } in
+        let pos_x=
+          subgsd.gframe.x
+            *. pos_ratio.ratio.ratio_x
+            +. pos_ratio.pos.pos_x
+        and pos_y=
+          subgsd.gframe.y
+            *. pos_ratio.ratio.ratio_y
+            +. pos_ratio.pos.pos_y
+        in
+        let pos_ratio= {
+          pos= {pos_x; pos_y};
+          ratio= ratio_final;
+        } in
+        glif_elts_of_gsd ~pos_ratio subgsd.gsd)
+    in
+    List.concat elements;
+  in
   let glif_of_gsd ?(wrapped=true) gsd=
+    let size= calc_size gsd in
     let name=
       let base= string_of_code_point gsd.code_point in
       if wrapped then
@@ -2453,45 +2365,9 @@ let outline_glif_of_gsd ~stroke_glyph gsd=
     in
     let format= 2
     and formatMinor= 0
-    and advance= Glif.{ width= float_of_int size.width; height= float_of_int size.height }
+    and advance= Glif.{ width= size.width; height= size.height }
     and unicodes= let (core,_)= gsd.code_point in [core]
-    and elements= ListLabels.map gsd.elements ~f:(fun element->
-      match element with
-      | Stroke stroke->
-        let gsdGlif:Glif.t= StrokeMap.find stroke.stroke_type stroke_glyph in
-        let dx= float_of_int stroke.frame.x
-        and dy= float_of_int stroke.frame.y
-        and rx= float_of_int stroke.frame.width /. gsdGlif.advance.width
-        and ry= float_of_int stroke.frame.height /. gsdGlif.advance.height in
-          Glif.Component
-          Glif.{
-            base= Some ("stroke/" ^ Stroke.to_string_type stroke.stroke_type);
-            xScale= rx;
-            xyScale= 0.;
-            yxScale= 0.;
-            yScale= ry;
-            xOffset= dx;
-            yOffset= dy;
-            identifier= None;
-          }
-      | SubGod subgsd->
-        let size= calc_size subgsd.gsd in
-        let dx= float_of_int subgsd.frame.x
-        and dy= float_of_int subgsd.frame.y
-        and rx= float_of_int subgsd.frame.width /. float_of_int size.width
-        and ry= float_of_int subgsd.frame.height /. float_of_int size.height in
-          Glif.Component
-          Glif.{
-            base= Some (string_of_code_point subgsd.gsd.code_point);
-            xScale= rx;
-            xyScale= 0.;
-            yxScale= 0.;
-            yScale= ry;
-            xOffset= dx;
-            yOffset= dy;
-            identifier= None;
-          }
-      )
+    and elements= glif_elts_of_gsd gsd
     in
     Glif.{
       name;
@@ -2501,9 +2377,10 @@ let outline_glif_of_gsd ~stroke_glyph gsd=
       unicodes;
       elements;
     }
+
   in
   let transform_wrap gsd=
-    let size= calc_size_f gsd in
+    let size= calc_size gsd in
     let code_point= gsd.code_point in
     let wrap=
       let xScale, yScale, xOffset, yOffset=
@@ -2513,7 +2390,7 @@ let outline_glif_of_gsd ~stroke_glyph gsd=
         | MirrorVertical-> (1., -1., 0., -. size.height)
         | Rotate180-> (-1., -1., -. size.width, -. size.height)
       in
-      Glif.Component Glif.{
+      Glif.Component {
         base= Some (string_of_code_point code_point ^ "_content");
         xScale;
         xyScale= 0.;
@@ -2558,4 +2435,3 @@ let outline_glif_of_gsd ~stroke_glyph gsd=
     gen_glif ()
   | _-> failwith (sprintf "outline_glif_of_gsd %d %d" gsd.version_major gsd.version_minor)
 
-*)
