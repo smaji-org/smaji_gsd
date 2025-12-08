@@ -2315,6 +2315,224 @@ type glif_of_gsd=
   | Wrapped of { wrap: Glif.t; content: Glif.t }
 
 let outline_glif_of_gsd gsd=
+  let glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
+    let elements= ListLabels.map gsd.elements ~f:(fun element->
+      match element with
+      | Stroke fstroke->
+        let fstroke= { fstroke with
+          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+        }
+        in
+        let points=
+          fstroke
+            |> fstroke_to_stroke
+            |> Stroke.to_path
+            |> Glif.points_of_path
+        in
+        Glif.Contour {
+          identifier= None;
+          points;
+        }
+      | SubGsd subgsd->
+        let size= calc_size subgsd.gsd in
+        let base= Some (string_of_code_point subgsd.gsd.code_point) in
+        let ratio= {
+          ratio_x= subgsd.gframe.width /. size.width;
+          ratio_y= subgsd.gframe.height /. size.height;
+        } in
+        let ratio_final= {
+          ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
+          ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
+        } in
+        let pos_x=
+          subgsd.gframe.x
+            *. pos_ratio.ratio.ratio_x
+            +. pos_ratio.pos.pos_x
+        and pos_y=
+          subgsd.gframe.y
+            *. pos_ratio.ratio.ratio_y
+            +. pos_ratio.pos.pos_y
+        in
+        let pos_ratio= {
+          pos= {pos_x; pos_y};
+          ratio= ratio_final;
+        } in
+        Glif.Component {
+          base;
+          xScale= pos_ratio.ratio.ratio_x;
+          xyScale= 0.;
+          yxScale= 0.;
+          yScale= pos_ratio.ratio.ratio_y;
+          xOffset= pos_ratio.pos.pos_x;
+          yOffset= pos_ratio.pos.pos_y;
+          identifier= None;
+        })
+    in
+    elements;
+  in
+  let glif_of_gsd ?(wrapped=true) gsd=
+    let size= calc_size gsd in
+    let name=
+      let base= string_of_code_point gsd.code_point in
+      if wrapped then
+        base ^ "_content"
+      else
+        base
+    in
+    let format= 2
+    and formatMinor= 0
+    and advance= Glif.{ width= size.width; height= size.height }
+    and unicodes= let (core,_)= gsd.code_point in [core]
+    and elements= glif_elts_of_gsd gsd
+    in
+    Glif.{
+      name;
+      format;
+      formatMinor;
+      advance;
+      unicodes;
+      elements;
+    }
+
+  in
+  let transform_wrap gsd=
+    let size= calc_size gsd in
+    let code_point= gsd.code_point in
+    let wrap=
+      let xScale, yScale, xOffset, yOffset=
+        match gsd.transform with
+        | NoTransform-> (1., 1., 0., 0.)
+        | MirrorHorizontal-> (-1., 1., -. size.width, 0.)
+        | MirrorVertical-> (1., -1., 0., -. size.height)
+        | Rotate180-> (-1., -1., -. size.width, -. size.height)
+      in
+      Glif.Component {
+        base= Some (string_of_code_point code_point ^ "_content");
+        xScale;
+        xyScale= 0.;
+        yxScale= 0.;
+        yScale;
+        xOffset;
+        yOffset;
+        identifier= None;
+      }
+    in
+    let (core,_)= code_point in
+    Glif.{
+      name= string_of_code_point code_point;
+      format= 2;
+      formatMinor= 0;
+      advance= {width= 0.; height= 0.};
+      unicodes= [core];
+      elements= [wrap];
+    }
+  in
+  let gen_glif ()=
+    match gsd.transform with
+    | NoTransform-> Glif (glif_of_gsd ~wrapped:false gsd)
+    | MirrorHorizontal->
+      let content= glif_of_gsd gsd in
+      let wrap= transform_wrap gsd in
+      Wrapped { wrap; content }
+      (* ["scale(-1 1)"; x] *)
+    | MirrorVertical->
+      let content= glif_of_gsd gsd in
+      let wrap= transform_wrap gsd in
+      Wrapped { wrap; content }
+      (* ["scale(1 -1)"; y] *)
+    | Rotate180->
+      let content= glif_of_gsd gsd in
+      let wrap= transform_wrap gsd in
+      Wrapped { wrap; content }
+      (* ["scale(-1 -1)"; x; y] *)
+  in
+  match gsd.version_major, gsd.version_minor with
+  | (1, 0) ->
+    gen_glif ()
+  | _-> failwith (sprintf "outline_glif_of_gsd %d %d" gsd.version_major gsd.version_minor)
+
+let flatten_glif_of_gsd gsd=
+  let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
+    let elements= ListLabels.map gsd.elements ~f:(fun element->
+      match element with
+      | Stroke fstroke->
+        let fstroke= { fstroke with
+          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+        }
+        in
+        let points=
+          fstroke
+            |> fstroke_to_stroke
+            |> Stroke.to_path
+            |> Glif.points_of_path
+        in
+        [Glif.Contour {
+          identifier= None;
+          points;
+        }]
+      | SubGsd subgsd->
+        let size= calc_size subgsd.gsd in
+        let ratio= {
+          ratio_x= subgsd.gframe.width /. size.width;
+          ratio_y= subgsd.gframe.height /. size.height;
+        } in
+        let ratio_final= {
+          ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
+          ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
+        } in
+        let pos_x=
+          subgsd.gframe.x
+            *. pos_ratio.ratio.ratio_x
+            +. pos_ratio.pos.pos_x
+        and pos_y=
+          subgsd.gframe.y
+            *. pos_ratio.ratio.ratio_y
+            +. pos_ratio.pos.pos_y
+        in
+        let pos_ratio= {
+          pos= {pos_x; pos_y};
+          ratio= ratio_final;
+        } in
+        glif_elts_of_gsd ~pos_ratio subgsd.gsd)
+    in
+    List.concat elements;
+  in
+  let glif_of_gsd ?(wrapped=true) gsd=
+    let size= calc_size gsd in
+    let name=
+      let base= string_of_code_point gsd.code_point in
+      if wrapped then
+        base ^ "_content"
+      else
+        base
+    in
+    let format= 2
+    and formatMinor= 0
+    and advance= Glif.{ width= size.width; height= size.height }
+    and unicodes= let (core,_)= gsd.code_point in [core]
+    and elements= glif_elts_of_gsd gsd
+    in
+    Glif.{
+      name;
+      format;
+      formatMinor;
+      advance;
+      unicodes;
+      elements;
+    }
+  in
+  let gen_glif ()=
+    match gsd.transform with
+    | NoTransform-> glif_of_gsd ~wrapped:false gsd
+    | _-> failwith "transform is not supported in flattening"
+  in
+  match gsd.version_major, gsd.version_minor with
+  | (1, 0) ->
+    gen_glif ()
+  | _-> failwith (sprintf "flatten_glif_of_gsd %d %d" gsd.version_major gsd.version_minor)
+
+(* waiting for newer glif format version to support flattening transform
+let outline_glif_of_gsd gsd=
   let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
@@ -2440,4 +2658,4 @@ let outline_glif_of_gsd gsd=
   | (1, 0) ->
     gen_glif ()
   | _-> failwith (sprintf "outline_glif_of_gsd %d %d" gsd.version_major gsd.version_minor)
-
+*)
