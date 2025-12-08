@@ -1746,8 +1746,14 @@ let outline_svg_of_gsd ?padding ?weight gsd=
     | None-> Utils.string_of_float (padding /. 2.)
   in
   let rec svg_of_gsd ?(indent=0) ?(pos_ratio=pos_ratio_default) gsd=
-    let indent_str0= String.make indent ' '
-    and indent_str1= String.make (indent+2) ' ' in
+    let elem_indent= indent +
+      match gsd.transform with
+      | NoTransform-> 0
+      | _-> 2
+    in
+    let elem_indent_str0= String.make elem_indent ' '
+    and elem_indent_str1= String.make (elem_indent+2) ' ' in
+    let indent_str0= String.make indent ' ' in
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
       | Stroke fstroke->
@@ -1759,12 +1765,12 @@ let outline_svg_of_gsd ?padding ?weight gsd=
           |> fstroke_to_stroke
           |> Stroke.to_path
           |> Svg.Svg_path.sub_of_path
-          |> Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(indent+2)
+          |> Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(elem_indent+2)
           |> fun cmd-> sprintf "%s<path fill=\"none\" d=\"\n%s\n%s\"\n%s/>"
-            indent_str0
+            elem_indent_str0
             cmd
-            indent_str1
-            indent_str0
+            elem_indent_str1
+            elem_indent_str0
       | SubGsd subgsd->
         let size= calc_size subgsd.gsd in
         let ratio= {
