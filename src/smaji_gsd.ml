@@ -67,13 +67,13 @@ let pos_ratio_adjust ~pos_ratio frame=
   let (x, width )=
     if width < 1. then
       let d= 1. -. width in
-      (x -. d, width +. d) 
+      (x -. d, width +. d)
     else
       (x, width)
   and (y, height )=
     if height < 1. then
       let d= 1. -. height in
-      (y -. d, height +. d) 
+      (y -. d, height +. d)
     else
       (y, height)
   in
@@ -781,7 +781,7 @@ module Raw = struct
         and v_length= Xml.get_length "v_length" nodes
         and h2_length= Xml.get_length "h2_length" nodes
         and a_radius= Xml.get_length_adjust "a_radius" nodes
-        and end_= Xml.get_point_adjust "ned" nodes in
+        and end_= Xml.get_point_adjust "end" nodes in
         Haj {
           haj_start;
           h1_length;
@@ -797,11 +797,11 @@ module Raw = struct
       | `El (((_ns,"hpj"), _attrs), nodes)->
         let open Stroke in
         let hpj_start= Xml.get_point "start" nodes
-        and length= Xml.get_length "h1_length" nodes
+        and length= Xml.get_length "length" nodes
         and ctrl1= Xml.get_point_adjust "ctrl1" nodes
         and ctrl2= Xml.get_point_adjust "ctrl2" nodes
         and p_end= Xml.get_point "p_end" nodes
-        and end_= Xml.get_point_adjust "ned" nodes in
+        and end_= Xml.get_point_adjust "end" nodes in
         Hpj {
           hpj_start;
           length;
@@ -1644,7 +1644,7 @@ let pos_ratio_adjust ~(pos_ratio:pos_ratio) stroke=
     ~r:{x= ratio.ratio_x; y= ratio.ratio_y}
 *)
 
-(** Return the svg outline of the gsd. Note: this function only works with god without any transformed Components inside, or an Invalid_argument exception is raised *)
+(** Return the svg outline of the gsd. Note: this function only works with gsd without any transformed Components inside, or an Invalid_argument exception is raised *)
 let rec gsd_flatten ?(pos_ratio=pos_ratio_default) gsd=
   match gsd.transform with
   | MirrorHorizontal | MirrorVertical | Rotate180-> invalid_arg "transform"
@@ -1721,7 +1721,7 @@ let fstroke_to_stroke fstroke=
   *)
   stroke
 
-(** Return the svg outline of the gsd. Note: this function only works with god without any transformed Components inside, or an Invalid_argument exception is raised *)
+(** Return the svg outline of the gsd. Note: this function only works with gsd without any transformed Components inside, or an Invalid_argument exception is raised *)
 let svg_of_gsd gsd=
   let viewBox= Smaji_glyph_path.Svg.ViewBox.{ min_x= 0.; min_y= 0.; width= 0.; height= 0.; }
   and paths= [gsd

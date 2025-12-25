@@ -5,7 +5,7 @@
  * Copyright : (c) 2023 - 2025, ZAN DoYe <zandoye@gmail.com>
  * Licence   : GPL2
  *
- * This file is a part of Smaji_god.
+ * This file is a part of Smaji_gsd.
  *)
 
 module Svg= Smaji_glyph_path.Svg
