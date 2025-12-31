@@ -15,8 +15,8 @@
       <start x="10" y="10"/>
       <h1_length is="32" />
       <t_end x="60" y="60" />
-      <h2_length is="50" />
       <a_radius><length is="5" /></a_radius>
+      <h2_length is="50" />
       <end><auto></auto></end>
     </htaj>
   </stroke>
@@ -25,8 +25,8 @@
       <start x="10" y="10"/>
       <h1_length is="32" />
       <t_end x="60" y="60" />
-      <h2_length is="50" />
       <a_radius><length is="5" /></a_radius>
+      <h2_length is="50" />
       <end><point x="1" y="2"/></end>
     </htaj>
   </stroke>
