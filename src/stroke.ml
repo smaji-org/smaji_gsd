@@ -553,8 +553,8 @@ type htaj= {
   htaj_start: point;
   h1_length: float;
   t_end: point;
-  h2_length: float;
   a_radius: float adjust;
+  h2_length: float;
   end_: point adjust;
 } (* Horizontal – Throw – Anticlockwise curve – J hook *)
 
@@ -566,7 +566,7 @@ type htc= {
   t_end: point;
   c_ctrl1: point adjust;
   c_ctrl2: point adjust;
-  c_end: point
+  end_: point
 } (* Horizontal – Throw – Clockwise curve *)
 
 type htht= {
@@ -787,8 +787,8 @@ type thtaj= {
   t1_end: point;
   h1_length: float;
   t2_end: point;
-  h2_length: float;
   a_radius: float adjust;
+  h2_length: float;
   end_: point adjust;
 } (* Throw – Horizontal – Throw – Anticlockwise curve – J hook *)
 
@@ -2200,10 +2200,9 @@ module To_path = struct
       t_ctrl1: point adjust;
       t_ctrl2: point adjust;
       t_end: point;
-      c_length: float;
-      c_width: float;
       c_ctrl1: point adjust;
       c_ctrl2: point adjust;
+      end_: point
     } (* Horizontal – Throw – Clockwise curve *)
   *)
 
@@ -2222,7 +2221,7 @@ module To_path = struct
       in
       Ccurve {ctrl1; ctrl2; end'} in
     let c=
-      let start= htc.t_end and end'= htc.c_end in
+      let start= htc.t_end and end'= htc.end_ in
       let calc_ctrl= template_curve ~start ~end' in
       let ctrl1= get_adjust htc.c_ctrl1
         ~f:(fun ()-> calc_ctrl ~ratio:{x= 0.5; y= 0.2})
@@ -4075,7 +4074,7 @@ module Transform = struct
       t_end= ps htc.t_end;
       c_ctrl1= pt htc.c_ctrl1;
       c_ctrl2= pt htc.c_ctrl2;
-      c_end= ps htc.c_end;
+      end_= ps htc.end_;
     }
   let htht_scale ?origin ~r htht=
     let pt= point_adjust_scale ?origin ~r in

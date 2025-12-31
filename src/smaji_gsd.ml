@@ -843,7 +843,7 @@ module Raw = struct
         and t_end= Xml.get_point "t_end" nodes
         and c_ctrl1= Xml.get_point_adjust "c_ctrl1" nodes
         and c_ctrl2= Xml.get_point_adjust "c_ctrl2" nodes
-        and c_end= Xml.get_point "c_end" nodes in
+        and end_= Xml.get_point "end" nodes in
         Htc {
           htc_start;
           h_length;
@@ -852,7 +852,7 @@ module Raw = struct
           t_end;
           c_ctrl1;
           c_ctrl2;
-          c_end;
+          end_;
         } |> Option.some
       | _-> None
 
@@ -1883,7 +1883,7 @@ let stroke_samples=
   });
   (S_v, V {
     v_start= {x= 8.; y= 8.};
-    length= 128.;
+    length= 110.;
   });
   (S_sv, Sv {
     sv_start= {x= 26.; y= 8.};
@@ -1892,14 +1892,14 @@ let stroke_samples=
   });
   (S_rsv, Rsv {
     rsv_start= {x= 8.; y= 8.};
-    length= 128.;
+    length= 110.;
     width= 18.;
   });
   (S_t, T {
-    t'_start= {x= 127.; y= 8.};
+    t'_start= {x= 120.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    end_= {x= 8.; y= 127.};
+    end_= {x= 8.; y= 120.};
   });
   (S_ft, Ft {
     ft_start= {x= 120.; y= 8.};
@@ -1934,7 +1934,7 @@ let stroke_samples=
     p_start= {x= 8.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    end_= {x= 127.; y= 127.};
+    end_= {x= 120.; y= 120.};
   });
   (S_up, Up {
     up_start= Auto;
@@ -1961,37 +1961,37 @@ let stroke_samples=
     p_start= {x= 31.; y= 31.};
     ctrl1= Auto;
     ctrl2= Auto;
-    end_= {x= 127.; y= 31.};
+    end_= {x= 120.; y= 31.};
   });
   (S_c, C {
     c_start= {x= 8.; y= 8.};
-    length= 128.;
-    width= 64.;
+    length= 120.;
+    width= 60.;
     ctrl1= Auto;
     ctrl2= Auto;
   });
   (S_a, A {
-    a_start= {x= 72.; y= 8.};
-    length= 128.;
-    width= 64.;
+    a_start= {x= 68.; y= 8.};
+    length= 120.;
+    width= 60.;
     ctrl1= Auto;
     ctrl2= Auto;
   });
   (S_o, O {
     o_start= {x= 8.; y= 8.};
-    length= 128.;
-    width= 128.;
+    length= 112.;
+    width= 112.;
     ctrl_h= Auto;
     ctrl_v= Auto;
   });
   (S_hj, Hj {
     hj_start= {x= 8.; y= 8.};
-    length= 128.;
+    length= 112.;
     end_= Auto;
   });
   (S_uj, Uj {
     uj_start= {x= 8.; y= 31.};
-    u_end= {x= 127.; y= 8.};
+    u_end= {x= 112.; y= 8.};
     end_= Auto;
   });
   (S_ht, Ht {
@@ -2003,7 +2003,7 @@ let stroke_samples=
   });
   (S_hsv, Hsv {
     hsv_start= {x= 8.; y= 8.};
-    h_length= 128.;
+    h_length= 112.;
     end_= Auto;
   });
   (S_hv, Hv {
@@ -2013,7 +2013,7 @@ let stroke_samples=
   });
   (S_hvj, Hvj {
     hvj_start= {x= 8.; y= 8.};
-    h_length= 128.;
+    h_length= 112.;
     v_length= Auto;
     end_= Auto;
   });
@@ -2022,7 +2022,7 @@ let stroke_samples=
     length= 110.;
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 81.; y= 110.};
+    t_end= {x= 80.; y= 110.};
     end_= Auto;
   });
   (S_utj, Utj {
@@ -2030,7 +2030,7 @@ let stroke_samples=
     t_start= {x= 120.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 96.; y= 64.};
+    t_end= {x= 90.; y= 64.};
     end_= Auto;
   });
   (S_hvh, Hvh {
@@ -2041,8 +2041,8 @@ let stroke_samples=
   });
   (S_hvu, Hvu {
     hvu_start= {x= 8.; y= 8.};
-    h_length= 64.;
-    v_length= 128.;
+    h_length= 60.;
+    v_length= 112.;
     end_= Auto;
   });
   (S_ha, Ha {
@@ -2084,7 +2084,7 @@ let stroke_samples=
     t_end= {x= 40.; y= 32.};
     c_ctrl1= Auto;
     c_ctrl2= Auto;
-    c_end= {x= 36.; y= 96.};
+    end_= {x= 36.; y= 96.};
   });
   (S_htht, Htht {
     htht_start= {x= 8.; y= 8.};
@@ -2104,8 +2104,8 @@ let stroke_samples=
     t_ctrl2= Auto;
     t_end= {x= 40.; y= 32.};
     c_ctrl1= Auto;
-    c_end= {x= 44.; y= 96.};
     c_ctrl2= Auto;
+    c_end= {x= 44.; y= 96.};
     end_= Auto;
   });
   (S_hvhv, Hvhv {
@@ -2129,13 +2129,13 @@ let stroke_samples=
   });
   (S_vu, Vu {
     vu_start= {x= 8.; y= 8.};
-    length= 128.;
+    length= 112.;
     end_= Auto;
   });
   (S_vh, Vh {
     vh_start= {x= 8.; y= 8.};
-    v_length= 128.;
-    h_length= 128.;
+    v_length= 112.;
+    h_length= 112.;
   });
   (S_va, Va {
     va_start= {x= 8.; y= 8.};
@@ -2167,15 +2167,15 @@ let stroke_samples=
   (S_vhtj, Vhtj {
     vhtj_start= {x= 8.; y= 8.};
     v_length= 56.;
-    h_length= 81.;
+    h_length= 80.;
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 56.; y= 120.};
+    t_end= {x= 56.; y= 112.};
     end_= Auto;
   });
   (S_vj, Vj {
     vj_start= {x= 16.; y= 8.};
-    length= 128.;
+    length= 112.;
     end_= Auto;
   });
   (S_vc, Vc {
@@ -2195,21 +2195,21 @@ let stroke_samples=
     tu_start= {x= 64.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 8.; y= 127.};
+    t_end= {x= 8.; y= 112.};
     end_= Auto;
   });
   (S_th, Th {
     th_start= {x= 64.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 8.; y= 127.};
+    t_end= {x= 8.; y= 112.};
     length= Auto;
   });
   (S_td, Td {
     td_start= {x= 56.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 8.; y= 63.};
+    t_end= {x= 8.; y= 64.};
     end_= Auto;
   });
   (S_wtd, Wtd {
@@ -2224,18 +2224,18 @@ let stroke_samples=
     tht_start= {x= 60.; y= 8.};
     t1_ctrl1= Auto;
     t1_ctrl2= Auto;
-    t1_end= {x= 8.; y= 60.};
-    length= 96.;
+    t1_end= {x= 8.; y= 58.};
+    length= 94.;
     t2_ctrl1= Auto;
     t2_ctrl2= Auto;
-    end_= {x= 8.; y= 127.};
+    end_= {x= 8.; y= 112.};
   });
   (S_thtj, Thtj {
     thtj_start= {x= 32.; y= 8.};
     t1_ctrl1= Auto;
     t1_ctrl2= Auto;
     t1_end= {x= 8.; y= 60.};
-    length= 81.;
+    length= 80.;
     t2_ctrl1= Auto;
     t2_ctrl2= Auto;
     t2_end= {x= 64.; y= 120.};
@@ -2252,21 +2252,21 @@ let stroke_samples=
     cj_start= {x= 16.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 32.; y= 127.};
+    t_end= {x= 32.; y= 112.};
     end_= Auto;
   });
   (S_fpj, Fpj {
     fpj_start= {x= 8.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 120.; y= 48.};
+    t_end= {x= 112.; y= 48.};
     end_= Auto;
   });
   (S_pj, Pj {
     pj_start= {x= 8.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 64.; y= 127.};
+    t_end= {x= 64.; y= 112.};
     end_= Auto;
   });
   (S_thtaj, Thtaj {
@@ -2274,7 +2274,7 @@ let stroke_samples=
     ctrl1= Auto;
     ctrl2= Auto;
     t1_end= {x= 12.; y= 32.};
-    h1_length= 81.;
+    h1_length= 80.;
     t2_end= {x= 16.; y= 96.;};
     h2_length= 90.;
     a_radius= Auto;
