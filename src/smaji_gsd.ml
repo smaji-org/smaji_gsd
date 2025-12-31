@@ -15,6 +15,37 @@ module Stroke= Stroke
 module Path= Smaji_glyph_path.Path
 module Point= Path.Point
 
+module EzxmlmFix = struct
+  include Ezxmlm
+
+  let from_channel chan =
+    let i = Xmlm.make_input (`Channel chan) in
+    let (dtd,doc) = from_input i in
+    (dtd, doc)
+
+  let from_string buf =
+    let i = Xmlm.make_input (`String (0,buf)) in
+    let (dtd,doc) = from_input i in
+    (dtd, doc)
+
+  let write_document mode ?(decl=false) ?(ns_prefix=(fun _-> Some "")) dtd doc =
+    let o = Xmlm.make_output ~decl ~ns_prefix mode in
+    to_output o (dtd, doc)
+
+  let make_tag tag ?(ns="") (attrs,nodes) =
+    `El (((ns,tag),attrs),nodes)
+
+  let to_channel chan ?(decl=false) dtd doc =
+    write_document (`Channel chan) ~decl dtd doc
+
+  let to_string ?(decl=false) ?dtd doc =
+    let buf = Buffer.create 512 in
+    write_document (`Buffer buf) ~decl dtd doc;
+    Buffer.contents buf
+
+  let pp fmt doc = Format.pp_print_string fmt (to_string doc)
+end
+
 open Printf
 
 type outline_type=
@@ -263,37 +294,6 @@ module Raw = struct
         Specify (Ezxmlm.get_attr "is" attrs |> Float.of_string)
       else
         Auto
-  end
-
-  module EzxmlmFix = struct
-    include Ezxmlm
-
-    let from_channel chan =
-      let i = Xmlm.make_input (`Channel chan) in
-      let (dtd,doc) = from_input i in
-      (dtd, doc)
-
-    let from_string buf =
-      let i = Xmlm.make_input (`String (0,buf)) in
-      let (dtd,doc) = from_input i in
-      (dtd, doc)
-
-    let write_document mode ?(decl=false) ?(ns_prefix=(fun _-> Some "")) dtd doc =
-      let o = Xmlm.make_output ~decl ~ns_prefix mode in
-      to_output o (dtd, doc)
-
-    let make_tag tag ?(ns="") (attrs,nodes) =
-      `El (((ns,tag),attrs),nodes)
-
-    let to_channel chan ?(decl=false) dtd doc =
-      write_document (`Channel chan) ~decl dtd doc
-
-    let to_string ?(decl=false) ?dtd doc =
-      let buf = Buffer.create 512 in
-      write_document (`Buffer buf) ~decl dtd doc;
-      Buffer.contents buf
-
-    let pp fmt doc = Format.pp_print_string fmt (to_string doc)
   end
 
   module GetStroke = struct
@@ -1890,12 +1890,24 @@ let outline_svg_of_gsd ?padding ?weight gsd=
   match gsd.version_major, gsd.version_minor with
   | (1, 0) ->
     let svg_str= svg_of_gsd ~indent:4 gsd in
+    let comment=
+      match gsd.comment with ""-> "" | comment->
+      let _dtd, comment= EzxmlmFix.from_string comment in
+      match EzxmlmFix.member_with_attr "comment" [comment] with
+      | _, comment->
+        (match EzxmlmFix.member_with_attr "svg" comment with
+        | _, subnodes->
+          subnodes |> List.map EzxmlmFix.to_string |> String.concat ""
+        | exception _-> "")
+      | exception _-> ""
+    in
     sprintf
-      "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n  <g stroke=\"black\" stroke-width=\"%s\">\n%s\n  </g>\n</svg>"
+      "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n  <g stroke=\"black\" stroke-width=\"%s\">\n%s\n  </g>\n%s</svg>"
       (Utils.string_of_float (frame.x +. frame.width +. padding*.2.))
       (Utils.string_of_float (frame.y +. frame.height +. padding*.2.))
       weight
       svg_str
+      comment
   | _-> failwith (sprintf "outline_svg_of_gsd %d %d" gsd.version_major gsd.version_minor)
 
 module StrokeMap= Map.Make(Stroke.Tag)
