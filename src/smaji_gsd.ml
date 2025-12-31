@@ -226,6 +226,7 @@ module Raw = struct
     code_point: code_point;
     transform: transform;
     elements: element list;
+    comment: string;
   }
 
   module Xml = struct
@@ -262,6 +263,37 @@ module Raw = struct
         Specify (Ezxmlm.get_attr "is" attrs |> Float.of_string)
       else
         Auto
+  end
+
+  module EzxmlmFix = struct
+    include Ezxmlm
+
+    let from_channel chan =
+      let i = Xmlm.make_input (`Channel chan) in
+      let (dtd,doc) = from_input i in
+      (dtd, doc)
+
+    let from_string buf =
+      let i = Xmlm.make_input (`String (0,buf)) in
+      let (dtd,doc) = from_input i in
+      (dtd, doc)
+
+    let write_document mode ?(decl=false) ?(ns_prefix=(fun _-> Some "")) dtd doc =
+      let o = Xmlm.make_output ~decl ~ns_prefix mode in
+      to_output o (dtd, doc)
+
+    let make_tag tag ?(ns="") (attrs,nodes) =
+      `El (((ns,tag),attrs),nodes)
+
+    let to_channel chan ?(decl=false) dtd doc =
+      write_document (`Channel chan) ~decl dtd doc
+
+    let to_string ?(decl=false) ?dtd doc =
+      let buf = Buffer.create 512 in
+      write_document (`Buffer buf) ~decl dtd doc;
+      Buffer.contents buf
+
+    let pp fmt doc = Format.pp_print_string fmt (to_string doc)
   end
 
   module GetStroke = struct
@@ -1508,10 +1540,15 @@ module Raw = struct
       }
     | _-> failwith "get_character"
 
-  let of_xml_nodes nodes=
-    let attrs, gsd= Ezxmlm.member_with_attr "gsd" nodes in
+  let of_xml_node node=
+    let attrs, gsd= Ezxmlm.member_with_attr "gsd" [node] in
     let (version_major, version_minor)= attrs |> Ezxmlm.get_attr "version" |> version_of_string in
     let attrs, glyph= Ezxmlm.member_with_attr "glyph" gsd in
+    let comment=
+      match Ezxmlm.member_with_attr "comment" gsd with
+      | tag-> tag |> EzxmlmFix.make_tag "comment" |> EzxmlmFix.to_string
+      | exception Ezxmlm.Tag_not_found _-> ""
+    in
     let code_point= attrs |> Ezxmlm.get_attr "unicode" |> code_point_of_string in
     let transform= (try attrs |> Ezxmlm.get_attr "transform" with Not_found-> "none")
       |> transform_of_string in
@@ -1532,17 +1569,18 @@ module Raw = struct
       code_point;
       transform;
       elements;
+      comment;
     }
 
 
   let of_string string=
-    let _dtd, nodes= Ezxmlm.from_string string in
-    of_xml_nodes nodes
+    let _dtd, node= EzxmlmFix.from_string string in
+    of_xml_node node
 
   let load_file path=
     In_channel.with_open_text path @@ fun chan->
-    let _dtd, nodes= Ezxmlm.from_channel chan in
-    of_xml_nodes nodes
+    let _dtd, node= EzxmlmFix.from_channel chan in
+    of_xml_node node
 
 end
 
@@ -1552,6 +1590,7 @@ type gsd= {
   code_point: code_point;
   transform: transform;
   elements: element list;
+  comment: string;
 }
 and subgsd= { gsd: gsd; gframe: frame }
 and fstroke= { stroke: stroke; sframe: frame }
@@ -1616,6 +1655,7 @@ let rec load_file ~dir ?(filename="default.xml") code_point=
     code_point= gsd_raw.code_point;
     transform= gsd_raw.transform;
     elements;
+    comment= gsd_raw.comment;
   }
 
 let of_string ~dir ?(filename="default.xml") string=
@@ -1631,6 +1671,7 @@ let of_string ~dir ?(filename="default.xml") string=
     code_point= gsd_raw.code_point;
     transform= gsd_raw.transform;
     elements;
+    comment= gsd_raw.comment;
   }
 
 (*
@@ -2393,7 +2434,6 @@ let outline_glif_of_gsd gsd=
       unicodes;
       elements;
     }
-
   in
   let transform_wrap gsd=
     let size= calc_size gsd in
