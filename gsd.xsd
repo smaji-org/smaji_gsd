@@ -374,7 +374,7 @@
   </xs:complexType>
   <xs:complexType name="stroke_ufp">
     <xs:sequence>
-      <xs:element name="start" type="point"/>
+      <xs:element name="start" type="point_adjust"/>
       <xs:element name="p_start" type="point"/>
       <xs:element name="ctrl1" type="point_adjust"/>
       <xs:element name="ctrl2" type="point_adjust"/>
@@ -384,28 +384,24 @@
   <xs:complexType name="stroke_c">
     <xs:sequence>
       <xs:element name="start" type="point"/>
-      <xs:element name="length" type="length"/>
-      <xs:element name="width" type="length"/>
-      <xs:element name="ctrl1" type="length_adjust"/>
-      <xs:element name="ctrl2" type="length_adjust"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="stroke_a">
     <xs:sequence>
       <xs:element name="start" type="point"/>
-      <xs:element name="length" type="length"/>
-      <xs:element name="width" type="length"/>
-      <xs:element name="ctrl1" type="length_adjust"/>
-      <xs:element name="ctrl2" type="length_adjust"/>
+      <xs:element name="ctrl1" type="point_adjust"/>
+      <xs:element name="ctrl2" type="point_adjust"/>
+      <xs:element name="end" type="point"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="stroke_o">
     <xs:sequence>
       <xs:element name="start" type="point"/>
-      <xs:element name="length" type="length"/>
       <xs:element name="width" type="length"/>
-      <xs:element name="ctrl_h" type="length_adjust"/>
-      <xs:element name="ctrl_v" type="length_adjust"/>
+      <xs:element name="end" type="point"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="stroke_hj">
@@ -522,9 +518,9 @@
     <xs:sequence>
       <xs:element name="start" type="point"/>
       <xs:element name="h1_length" type="length"/>
-      <xs:element name="t_end" type="point"/>
-      <xs:element name="a_radius" type="length_adjust"/>
       <xs:element name="h2_length" type="length"/>
+      <xs:element name="a_end" type="point"/>
+      <xs:element name="a_radius" type="length_adjust"/>
       <xs:element name="end" type="point_adjust"/>
     </xs:sequence>
   </xs:complexType>
@@ -703,7 +699,6 @@
   <xs:complexType name="stroke_wtd">
     <xs:sequence>
       <xs:element name="start" type="point"/>
-      <xs:element name="v_length" type="length_adjust"/>
       <xs:element name="ctrl1" type="point_adjust"/>
       <xs:element name="ctrl2" type="point_adjust"/>
       <xs:element name="t_end" type="point"/>
@@ -749,7 +744,7 @@
       <xs:element name="start" type="point"/>
       <xs:element name="ctrl1" type="point_adjust"/>
       <xs:element name="ctrl2" type="point_adjust"/>
-      <xs:element name="t_end" type="point"/>
+      <xs:element name="c_end" type="point"/>
       <xs:element name="end" type="point_adjust"/>
     </xs:sequence>
   </xs:complexType>
@@ -758,7 +753,7 @@
       <xs:element name="start" type="point"/>
       <xs:element name="ctrl1" type="point_adjust"/>
       <xs:element name="ctrl2" type="point_adjust"/>
-      <xs:element name="t_end" type="point"/>
+      <xs:element name="p_end" type="point"/>
       <xs:element name="end" type="point_adjust"/>
     </xs:sequence>
   </xs:complexType>
@@ -767,7 +762,7 @@
       <xs:element name="start" type="point"/>
       <xs:element name="ctrl1" type="point_adjust"/>
       <xs:element name="ctrl2" type="point_adjust"/>
-      <xs:element name="t_end" type="point"/>
+      <xs:element name="p_end" type="point"/>
       <xs:element name="end" type="point_adjust"/>
     </xs:sequence>
   </xs:complexType>
@@ -776,11 +771,11 @@
       <xs:element name="start" type="point"/>
       <xs:element name="ctrl1" type="point_adjust"/>
       <xs:element name="ctrl2" type="point_adjust"/>
-      <xs:element name="t1_end" type="point"/>
+      <xs:element name="t_end" type="point"/>
       <xs:element name="h1_length" type="length"/>
-      <xs:element name="t2_end" type="point"/>
-      <xs:element name="a_radius" type="length_adjust"/>
       <xs:element name="h2_length" type="length"/>
+      <xs:element name="a_end" type="point"/>
+      <xs:element name="a_radius" type="length_adjust"/>
       <xs:element name="end" type="point_adjust"/>
     </xs:sequence>
   </xs:complexType>

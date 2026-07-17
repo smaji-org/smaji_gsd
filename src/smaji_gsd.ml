@@ -11,7 +11,11 @@
 
 module Svg= Smaji_glyph_path.Svg
 module Glif= Smaji_glyph_path.Glif
+module Typeface= Typeface
 module Stroke= Stroke
+module Stroke_def= Stroke_def
+module Stroke_black= Stroke_black
+module Stroke_ming= Stroke_ming
 module Path= Smaji_glyph_path.Path
 module Point= Path.Point
 
@@ -556,7 +560,7 @@ module Raw = struct
       match node with
       | `El (((_ns,"ufp"), _attrs), nodes)->
         let open Stroke in
-        let ufp_start= Xml.get_point "start" nodes
+        let ufp_start= Xml.get_point_adjust "start" nodes
         and p_start= Xml.get_point "p_start" nodes
         and ctrl1= Xml.get_point_adjust "ctrl1" nodes
         and ctrl2= Xml.get_point_adjust "ctrl2" nodes
@@ -575,16 +579,14 @@ module Raw = struct
       | `El (((_ns,"c"), _attrs), nodes)->
         let open Stroke in
         let c_start= Xml.get_point "start" nodes
-        and length= Xml.get_length "length" nodes
-        and width= Xml.get_length "width" nodes
-        and ctrl1= Xml.get_length_adjust "ctrl1" nodes
-        and ctrl2= Xml.get_length_adjust "ctrl2" nodes in
+        and ctrl1= Xml.get_point_adjust "ctrl1" nodes
+        and ctrl2= Xml.get_point_adjust "ctrl2" nodes
+        and end_= Xml.get_point "end" nodes in
         C {
           c_start;
-          length;
-          width;
           ctrl1;
           ctrl2;
+          end_;
         } |> Option.some
       | _-> None
 
@@ -593,16 +595,14 @@ module Raw = struct
       | `El (((_ns,"a"), _attrs), nodes)->
         let open Stroke in
         let a_start= Xml.get_point "start" nodes
-        and length= Xml.get_length "length" nodes
-        and width= Xml.get_length "width" nodes
-        and ctrl1= Xml.get_length_adjust "ctrl1" nodes
-        and ctrl2= Xml.get_length_adjust "ctrl2" nodes in
+        and ctrl1= Xml.get_point_adjust "ctrl1" nodes
+        and ctrl2= Xml.get_point_adjust "ctrl2" nodes
+        and end_= Xml.get_point "end" nodes in
         A {
           a_start;
-          length;
-          width;
           ctrl1;
           ctrl2;
+          end_;
         } |> Option.some
       | _-> None
 
@@ -611,16 +611,12 @@ module Raw = struct
       | `El (((_ns,"o"), _attrs), nodes)->
         let open Stroke in
         let o_start= Xml.get_point "start" nodes
-        and length= Xml.get_length "length" nodes
         and width= Xml.get_length "width" nodes
-        and ctrl_h= Xml.get_length_adjust "ctrl_h" nodes
-        and ctrl_v= Xml.get_length_adjust "ctrl_v" nodes in
+        and end_= Xml.get_point "end" nodes in
         O {
           o_start;
-          length;
           width;
-          ctrl_h;
-          ctrl_v;
+          end_;
         } |> Option.some
       | _-> None
 
@@ -850,15 +846,15 @@ module Raw = struct
         let open Stroke in
         let htaj_start= Xml.get_point "start" nodes
         and h1_length= Xml.get_length "h1_length" nodes
-        and t_end= Xml.get_point "t_end" nodes
         and h2_length= Xml.get_length "h2_length" nodes
+        and a_end= Xml.get_point "a_end" nodes
         and a_radius= Xml.get_length_adjust "a_radius" nodes
         and end_= Xml.get_point_adjust "end" nodes in
         Htaj {
           htaj_start;
           h1_length;
-          t_end;
           h2_length;
+          a_end;
           a_radius;
           end_;
         } |> Option.some
@@ -971,7 +967,7 @@ module Raw = struct
         and h2_length= Xml.get_length "h2_length" nodes
         and t2_ctrl1= Xml.get_point_adjust "t2_ctrl1" nodes
         and t2_ctrl2= Xml.get_point_adjust "t2_ctrl2" nodes
-        and t2_end= Xml.get_point "end" nodes
+        and t2_end= Xml.get_point "t2_end" nodes
         and end_= Xml.get_point_adjust "end" nodes
         in
         Hthtj {
@@ -1127,8 +1123,8 @@ module Raw = struct
       | `El (((_ns,"vc"), _attrs), nodes)->
         let open Stroke in
         let vc_start= Xml.get_point "start" nodes
-        and v_length= Xml.get_length "length" nodes
-        and h_length= Xml.get_length "length" nodes
+        and v_length= Xml.get_length "v_length" nodes
+        and h_length= Xml.get_length "h_length" nodes
         and a_radius= Xml.get_length_adjust "a_radius" nodes in
         Vc {
           vc_start;
@@ -1143,10 +1139,10 @@ module Raw = struct
       | `El (((_ns,"vcj"), _attrs), nodes)->
         let open Stroke in
         let vcj_start= Xml.get_point "start" nodes
-        and v_length= Xml.get_length "length" nodes
-        and h_length= Xml.get_length "length" nodes
+        and v_length= Xml.get_length "v_length" nodes
+        and h_length= Xml.get_length "h_length" nodes
         and a_radius= Xml.get_length_adjust "a_radius" nodes
-        and end_= Xml.get_point_adjust "end_" nodes in
+        and end_= Xml.get_point_adjust "end" nodes in
         Vcj {
           vcj_start;
           v_length;
@@ -1215,14 +1211,12 @@ module Raw = struct
       | `El (((_ns,"wtd"), _attrs), nodes)->
         let open Stroke in
         let wtd_start= Xml.get_point "start" nodes
-        and v_length= Xml.get_length_adjust "v_length" nodes
         and ctrl1= Xml.get_point_adjust "ctrl1" nodes
         and ctrl2= Xml.get_point_adjust "ctrl2" nodes
         and t_end= Xml.get_point "t_end" nodes
         and end_= Xml.get_point_adjust "end" nodes in
         Wtd {
           wtd_start;
-          v_length;
           ctrl1;
           ctrl2;
           t_end;
@@ -1307,13 +1301,13 @@ module Raw = struct
         let cj_start= Xml.get_point "start" nodes
         and ctrl1= Xml.get_point_adjust "ctrl1" nodes
         and ctrl2= Xml.get_point_adjust "ctrl2" nodes
-        and t_end= Xml.get_point "t_end" nodes
+        and c_end= Xml.get_point "c_end" nodes
         and end_= Xml.get_point_adjust "end" nodes in
         Cj {
           cj_start;
           ctrl1;
           ctrl2;
-          t_end;
+          c_end;
           end_;
         } |> Option.some
       | _-> None
@@ -1325,13 +1319,13 @@ module Raw = struct
         let fpj_start= Xml.get_point "start" nodes
         and ctrl1= Xml.get_point_adjust "ctrl1" nodes
         and ctrl2= Xml.get_point_adjust "ctrl2" nodes
-        and t_end= Xml.get_point "t_end" nodes
+        and p_end= Xml.get_point "p_end" nodes
         and end_= Xml.get_point_adjust "end" nodes in
         Fpj {
           fpj_start;
           ctrl1;
           ctrl2;
-          t_end;
+          p_end;
           end_;
         } |> Option.some
       | _-> None
@@ -1343,13 +1337,13 @@ module Raw = struct
         let pj_start= Xml.get_point "start" nodes
         and ctrl1= Xml.get_point_adjust "ctrl1" nodes
         and ctrl2= Xml.get_point_adjust "ctrl2" nodes
-        and t_end= Xml.get_point "t_end" nodes
+        and p_end= Xml.get_point "p_end" nodes
         and end_= Xml.get_point_adjust "end" nodes in
         Pj {
           pj_start;
           ctrl1;
           ctrl2;
-          t_end;
+          p_end;
           end_;
         } |> Option.some
       | _-> None
@@ -1361,9 +1355,9 @@ module Raw = struct
         let thtaj_start= Xml.get_point "start" nodes
         and ctrl1= Xml.get_point_adjust "ctrl1" nodes
         and ctrl2= Xml.get_point_adjust "ctrl2" nodes
-        and t1_end= Xml.get_point "t1_end" nodes
+        and t_end= Xml.get_point "t_end" nodes
         and h1_length= Xml.get_length "h1_length" nodes
-        and t2_end= Xml.get_point "t2_end" nodes
+        and a_end= Xml.get_point "a_end" nodes
         and h2_length= Xml.get_length "h2_length" nodes
         and a_radius= Xml.get_length_adjust "a_radius" nodes
         and end_= Xml.get_point_adjust "end" nodes
@@ -1372,9 +1366,9 @@ module Raw = struct
           thtaj_start;
           ctrl1;
           ctrl2;
-          t1_end;
+          t_end;
           h1_length;
-          t2_end;
+          a_end;
           h2_length;
           a_radius;
           end_;
@@ -1646,7 +1640,7 @@ let rec load_file ~dir ?(filename="default.xml") code_point=
   let gsd_raw= Raw.load_file (dir / path_of_code_point code_point / filename) in
   let elements= gsd_raw.elements |> List.map (function
     | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gframe= ref.frame }
-    | Raw.Stroke stroke-> Stroke { stroke; sframe= Stroke.to_frame stroke }
+    | Raw.Stroke stroke-> Stroke { stroke; sframe= Stroke_black.to_frame_raw stroke }
     )
   in
   {
@@ -1662,7 +1656,7 @@ let of_string ~dir ?(filename="default.xml") string=
   let gsd_raw= Raw.of_string string in
   let elements= gsd_raw.elements |> List.map (function
     | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gframe= ref.frame }
-    | Raw.Stroke stroke-> Stroke { stroke; sframe= Stroke.to_frame stroke }
+    | Raw.Stroke stroke-> Stroke { stroke; sframe= Stroke.to_frame_raw stroke }
     )
   in
   {
@@ -1722,9 +1716,9 @@ let rec gsd_flatten ?(pos_ratio=pos_ratio_default) gsd=
   in
   List.concat elements
 
-let svg_of_stroke stroke=
+let svg_of_stroke ~to_path stroke=
   let svg: Svg.t=
-    let sub= stroke |> Stroke.to_path |> Smaji_glyph_path.Svg.Svg_path.sub_of_path in
+    let sub= stroke |> to_path |> Smaji_glyph_path.Svg.Svg_path.sub_of_path in
     let svg_path= [sub] in
     let paths= [svg_path] in
     let frame, _latest= Smaji_glyph_path.Svg.Svg_path.get_frame_sub sub in
@@ -1739,12 +1733,9 @@ let svg_of_stroke stroke=
   in
   svg
 
-let paths_of_stroke stroke=
-  Stroke.to_path stroke
-
 let fstroke_to_stroke fstroke=
   let target= fstroke.sframe in
-  let frame= Stroke.to_frame fstroke.stroke in
+  let frame= Stroke.to_frame_raw fstroke.stroke in
   let stroke= fstroke.stroke in
   let origin= Point.{ x= target.x; y= target.y } in
   let d= Point.{ x= target.x -. frame.x; y= target.y -. frame.y } in
@@ -1763,28 +1754,41 @@ let fstroke_to_stroke fstroke=
   stroke
 
 (** Return the svg outline of the gsd. Note: this function only works with gsd without any transformed Components inside, or an Invalid_argument exception is raised *)
-let svg_of_gsd gsd=
+let svg_of_gsd ~to_path gsd=
   let viewBox= Smaji_glyph_path.Svg.ViewBox.{ min_x= 0.; min_y= 0.; width= 0.; height= 0.; }
   and paths= [gsd
     |> gsd_flatten
-    |> List.map (fun fstroke-> fstroke |> fstroke_to_stroke |> Stroke.to_path |> Svg.Svg_path.sub_of_path)
+    |> List.map (fun fstroke-> fstroke |> fstroke_to_stroke |> to_path |> Svg.Svg_path.sub_of_path)
     ]
   in
   let svg= Smaji_glyph_path.Svg.{ viewBox; paths } in
   Smaji_glyph_path.Svg.Adjust.viewBox_fitFrame_reset svg
 
-let outline_svg_of_gsd ?padding ?weight gsd=
+let outline_svg_of_gsd ?padding ~width ~to_path gsd=
   let frame= gsd_frame gsd in
   let size= { width=frame.width; height= frame.height } in
   let padding= max 1. @@
     match padding with
     | Some padding-> padding
-    | None-> (size.height +. size.width) /. 10. /. 2.
+    | None-> width
   in
-  let weight=
-    match weight with
-    | Some weight-> weight
-    | None-> Utils.string_of_float (padding /. 2.)
+  let gen_cmd=
+    match to_path with
+    | Stroke.Stroke_path _-> sprintf "%s<path fill=\"none\" d=\"\n%s\n%s\"\n%s/>"
+    | Stroke.Outline_path _-> sprintf "%s<path d=\"\n%s\n%s\"\n%s/>"
+  in
+  let to_path, first_indent, wrap=
+    let w= Utils.string_of_float (frame.x +. frame.width +. padding*.2.)
+    and h= Utils.string_of_float (frame.y +. frame.height +. padding*.2.) in
+    match to_path with
+    | Stroke.Stroke_path f-> ((fun t-> [f t]), 4,
+      sprintf
+        "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n  <g stroke=\"black\" stroke-width=\"%s\">\n%s\n  </g>\n%s</svg>" w h (Utils.string_of_float width)
+      )
+    | Stroke.Outline_path f-> (f ~width, 2,
+      sprintf
+        "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n%s\n%s</svg>" w h
+      )
   in
   let rec svg_of_gsd ?(indent=0) ?(pos_ratio=pos_ratio_default) gsd=
     let elem_indent= indent +
@@ -1804,10 +1808,11 @@ let outline_svg_of_gsd ?padding ?weight gsd=
         in
         fstroke
           |> fstroke_to_stroke
-          |> Stroke.to_path
-          |> Svg.Svg_path.sub_of_path
-          |> Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(elem_indent+2)
-          |> fun cmd-> sprintf "%s<path fill=\"none\" d=\"\n%s\n%s\"\n%s/>"
+          |> to_path
+          |> List.map Svg.Svg_path.sub_of_path
+          |> List.map (Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(elem_indent+2))
+          |> String.concat "\n"
+          |> fun cmd-> gen_cmd
             elem_indent_str0
             cmd
             elem_indent_str1
@@ -1889,7 +1894,7 @@ let outline_svg_of_gsd ?padding ?weight gsd=
   in
   match gsd.version_major, gsd.version_minor with
   | (1, 0) ->
-    let svg_str= svg_of_gsd ~indent:4 gsd in
+    let svg_str= svg_of_gsd ~indent:first_indent gsd in
     let comment=
       match gsd.comment with ""-> "" | comment->
       let _dtd, comment= EzxmlmFix.from_string comment in
@@ -1901,11 +1906,7 @@ let outline_svg_of_gsd ?padding ?weight gsd=
         | exception _-> "")
       | exception _-> ""
     in
-    sprintf
-      "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n  <g stroke=\"black\" stroke-width=\"%s\">\n%s\n  </g>\n%s</svg>"
-      (Utils.string_of_float (frame.x +. frame.width +. padding*.2.))
-      (Utils.string_of_float (frame.y +. frame.height +. padding*.2.))
-      weight
+    wrap
       svg_str
       comment
   | _-> failwith (sprintf "outline_svg_of_gsd %d %d" gsd.version_major gsd.version_minor)
@@ -2010,7 +2011,7 @@ let stroke_samples=
     end_= {x= 120.; y= 48.};
   });
   (S_ufp, Ufp {
-    ufp_start= {x= 8.; y= 31.};
+    ufp_start= Auto;
     p_start= {x= 31.; y= 31.};
     ctrl1= Auto;
     ctrl2= Auto;
@@ -2018,24 +2019,20 @@ let stroke_samples=
   });
   (S_c, C {
     c_start= {x= 8.; y= 8.};
-    length= 120.;
-    width= 60.;
     ctrl1= Auto;
     ctrl2= Auto;
+    end_= {x= 8.; y= 64.};
   });
   (S_a, A {
     a_start= {x= 68.; y= 8.};
-    length= 120.;
-    width= 60.;
     ctrl1= Auto;
     ctrl2= Auto;
+    end_= {x= 8.; y= 64.};
   });
   (S_o, O {
-    o_start= {x= 8.; y= 8.};
-    length= 112.;
+    o_start= {x= 64.; y= 8.};
     width= 112.;
-    ctrl_h= Auto;
-    ctrl_v= Auto;
+    end_= {x= 64.; y= 120.};
   });
   (S_hj, Hj {
     hj_start= {x= 8.; y= 8.};
@@ -2124,8 +2121,8 @@ let stroke_samples=
   (S_htaj, Htaj {
     htaj_start= {x= 16.; y= 8.};
     h1_length= 96.;
-    t_end= {x= 16.; y= 112.};
     h2_length= 112.;
+    a_end= {x= 120.; y= 112.};
     a_radius= Auto;
     end_= Auto;
   });
@@ -2267,7 +2264,6 @@ let stroke_samples=
   });
   (S_wtd, Wtd {
     wtd_start= {x= 48.; y= 8.};
-    v_length= Auto;
     ctrl1= Auto;
     ctrl2= Auto;
     t_end= {x= 8.; y= 64.};
@@ -2305,30 +2301,30 @@ let stroke_samples=
     cj_start= {x= 16.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 32.; y= 112.};
+    c_end= {x= 32.; y= 112.};
     end_= Auto;
   });
   (S_fpj, Fpj {
     fpj_start= {x= 8.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 112.; y= 48.};
+    p_end= {x= 112.; y= 48.};
     end_= Auto;
   });
   (S_pj, Pj {
     pj_start= {x= 8.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t_end= {x= 64.; y= 112.};
+    p_end= {x= 64.; y= 112.};
     end_= Auto;
   });
   (S_thtaj, Thtaj {
     thtaj_start= {x= 32.; y= 8.};
     ctrl1= Auto;
     ctrl2= Auto;
-    t1_end= {x= 12.; y= 32.};
+    t_end= {x= 12.; y= 32.};
     h1_length= 80.;
-    t2_end= {x= 16.; y= 96.;};
+    a_end= {x= 96.; y= 96.;};
     h2_length= 90.;
     a_radius= Auto;
     end_= Auto;
@@ -2367,7 +2363,12 @@ type glif_of_gsd=
   | Glif of Glif.t
   | Wrapped of { wrap: Glif.t; content: Glif.t }
 
-let outline_glif_of_gsd gsd=
+let outline_glif_of_gsd ~width ~to_path gsd=
+  let to_path=
+    match to_path with
+    | Stroke.Stroke_path f-> fun t-> [f t]
+    | Stroke.Outline_path f-> f ~width
+  in
   let glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
@@ -2376,16 +2377,18 @@ let outline_glif_of_gsd gsd=
           sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
         }
         in
-        let points=
+        let contours=
           fstroke
             |> fstroke_to_stroke
-            |> Stroke.to_path
-            |> Glif.points_of_path
+            |> to_path
+            |> List.map Glif.points_of_path
+            |> List.map (fun points->
+              Glif.Contour {
+                identifier= None;
+                points;
+              })
         in
-        Glif.Contour {
-          identifier= None;
-          points;
-        }
+        contours
       | SubGsd subgsd->
         let size= calc_size subgsd.gsd in
         let base= Some (string_of_code_point subgsd.gsd.code_point) in
@@ -2410,7 +2413,7 @@ let outline_glif_of_gsd gsd=
           pos= {pos_x; pos_y};
           ratio= ratio_final;
         } in
-        Glif.Component {
+        [Glif.Component {
           base;
           xScale= pos_ratio.ratio.ratio_x;
           xyScale= 0.;
@@ -2419,9 +2422,9 @@ let outline_glif_of_gsd gsd=
           xOffset= pos_ratio.pos.pos_x;
           yOffset= pos_ratio.pos.pos_y;
           identifier= None;
-        })
+        }])
     in
-    elements;
+    elements |> List.concat;
   in
   let glif_of_gsd ?(wrapped=true) gsd=
     let size= calc_size gsd in
@@ -2503,7 +2506,12 @@ let outline_glif_of_gsd gsd=
     gen_glif ()
   | _-> failwith (sprintf "outline_glif_of_gsd %d %d" gsd.version_major gsd.version_minor)
 
-let flatten_glif_of_gsd gsd=
+let flatten_glif_of_gsd ~width ~to_path gsd=
+  let to_path=
+    match to_path with
+    | Stroke.Stroke_path f-> fun t-> [f t]
+    | Stroke.Outline_path f-> f ~width
+  in
   let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
@@ -2512,16 +2520,15 @@ let flatten_glif_of_gsd gsd=
           sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
         }
         in
-        let points=
-          fstroke
-            |> fstroke_to_stroke
-            |> Stroke.to_path
-            |> Glif.points_of_path
-        in
-        [Glif.Contour {
-          identifier= None;
-          points;
-        }]
+        fstroke
+          |> fstroke_to_stroke
+          |> to_path
+          |> List.map (fun path->
+            let points= Glif.points_of_path path in
+            Glif.Contour {
+              identifier= None;
+              points;
+            })
       | SubGsd subgsd->
         let size= calc_size subgsd.gsd in
         let ratio= {

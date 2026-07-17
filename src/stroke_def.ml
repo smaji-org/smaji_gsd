@@ -396,7 +396,7 @@ type fp= {
   (* 4. ctrl2 is to the top right of end_ *)
 
 type ufp= {
-  ufp_start: point;
+  ufp_start: point adjust;
   p_start: point;
   ctrl1: point adjust;
   ctrl2: point adjust;
@@ -410,26 +410,22 @@ type ufp= {
 
 type c= {
   c_start: point;
-  length: float;
-  width: float;
-  ctrl1: float adjust;
-  ctrl2: float adjust;
+  ctrl1: point adjust;
+  ctrl2: point adjust;
+  end_: point;
 } (* Clockwise curve *)
 
 type a= {
   a_start: point;
-  length: float;
-  width: float;
-  ctrl1: float adjust;
-  ctrl2: float adjust;
+  ctrl1: point adjust;
+  ctrl2: point adjust;
+  end_: point;
 } (* Anticlockwise curve *)
 
 type o= {
   o_start: point;
-  length: float;
   width: float;
-  ctrl_h: float adjust;
-  ctrl_v: float adjust;
+  end_: point;
 } (* Oval *)
 
 type hj= {
@@ -552,9 +548,9 @@ type hpj= {
 type htaj= {
   htaj_start: point;
   h1_length: float;
-  t_end: point;
-  a_radius: float adjust;
   h2_length: float;
+  a_end: point;
+  a_radius: float adjust;
   end_: point adjust;
 } (* Horizontal – Throw – Anticlockwise curve – J hook *)
 
@@ -714,7 +710,6 @@ type td= {
 
 type wtd= {
   wtd_start: point;
-  v_length: float adjust;
   ctrl1: point adjust;
   ctrl2: point adjust;
   t_end: point;
@@ -757,7 +752,7 @@ type cj= {
   cj_start: point;
   ctrl1: point adjust;
   ctrl2: point adjust;
-  t_end: point;
+  c_end: point;
   end_: point adjust;
 } (* Clockwise curve – J hook *)
   (* 1. end_ is to the bottom right of cj_start *)
@@ -766,7 +761,7 @@ type fpj= {
   fpj_start: point;
   ctrl1: point adjust;
   ctrl2: point adjust;
-  t_end: point;
+  p_end: point;
   end_: point adjust;
 } (* Flat Press – J hook *)
   (* 1. the angle is limited between 5 to 40 degrees *)
@@ -775,7 +770,7 @@ type pj= {
   pj_start: point;
   ctrl1: point adjust;
   ctrl2: point adjust;
-  t_end: point;
+  p_end: point;
   end_: point adjust;
 } (* Press – J hook *)
   (* 1. the angle is limited between 45 to 85 degrees *)
@@ -784,11 +779,11 @@ type thtaj= {
   thtaj_start: point;
   ctrl1: point adjust;
   ctrl2: point adjust;
-  t1_end: point;
+  t_end: point;
   h1_length: float;
-  t2_end: point;
-  a_radius: float adjust;
   h2_length: float;
+  a_end: point;
+  a_radius: float adjust;
   end_: point adjust;
 } (* Throw – Horizontal – Throw – Anticlockwise curve – J hook *)
 
@@ -943,6 +938,7 @@ let to_string stroke=
 
 module Transform = struct
   open Point
+  open Ops
 
   let point_translate ~d p=
     match p with
@@ -1031,7 +1027,7 @@ module Transform = struct
     }
   let ufp_translate ~d ufp=
     {
-      ufp_start= ufp.ufp_start + d;
+      ufp_start= point_translate ~d ufp.ufp_start;
       p_start= ufp.p_start + d;
       ctrl1= point_translate ~d ufp.ctrl1;
       ctrl2= point_translate ~d ufp.ctrl2;
@@ -1112,7 +1108,7 @@ module Transform = struct
   let htaj_translate ~d htaj=
     { htaj with
       htaj_start= htaj.htaj_start + d;
-      t_end= htaj.t_end + d;
+      a_end= htaj.a_end + d;
       end_= point_translate ~d htaj.end_;
     }
   let htc_translate ~d htc=
@@ -1229,7 +1225,7 @@ module Transform = struct
     }
   let wtd_translate ~d wtd=
     let pt= point_translate ~d in
-    { wtd with
+    {
       wtd_start= wtd.wtd_start + d;
       ctrl1= pt wtd.ctrl1;
       ctrl2= pt wtd.ctrl2;
@@ -1274,7 +1270,7 @@ module Transform = struct
       cj_start= cj.cj_start;
       ctrl1= pt cj.ctrl1;
       ctrl2= pt cj.ctrl2;
-      t_end= cj.t_end + d;
+      c_end= cj.c_end + d;
       end_= pt cj.end_;
     }
   let fpj_translate ~d fpj=
@@ -1283,7 +1279,7 @@ module Transform = struct
       fpj_start= fpj.fpj_start + d;
       ctrl1= pt fpj.ctrl1;
       ctrl2= pt fpj.ctrl2;
-      t_end= fpj.t_end + d;
+      p_end= fpj.p_end + d;
       end_= pt fpj.end_;
     }
   let pj_translate ~d pj=
@@ -1292,17 +1288,17 @@ module Transform = struct
       pj_start= pj.pj_start + d;
       ctrl1= pt pj.ctrl1;
       ctrl2= pt pj.ctrl2;
-      t_end= pj.t_end + d;
+      p_end= pj.p_end + d;
       end_= pt pj.end_;
     }
-  let thtaj_translate ~d thtaj=
+  let thtaj_translate ~d (thtaj:thtaj)=
     let pt= point_translate ~d in
     { thtaj with
       thtaj_start= thtaj.thtaj_start + d;
       ctrl1= pt thtaj.ctrl1;
       ctrl2= pt thtaj.ctrl1;
-      t1_end= thtaj.t1_end + d;
-      t2_end= thtaj.t2_end + d;
+      t_end= thtaj.t_end + d;
+      a_end= thtaj.a_end + d;
       end_= pt thtaj.end_;
     }
   let tod_translate ~d tod=
@@ -1439,7 +1435,7 @@ module Transform = struct
     }
   let ufp_scale ?origin ~r ufp=
     {
-      ufp_start= point_scale ?origin ~r ufp.ufp_start;
+      ufp_start= point_adjust_scale ?origin ~r ufp.ufp_start;
       p_start= point_scale ?origin ~r ufp.p_start;
       ctrl1= point_adjust_scale ?origin ~r ufp.ctrl1;
       ctrl2= point_adjust_scale ?origin ~r ufp.ctrl2;
@@ -1447,24 +1443,20 @@ module Transform = struct
     }
   let c_scale ?origin ~r c= {
     c_start= point_scale ?origin ~r c.c_start ;
-      length= c.length *. r.y;
-      width= c.width *. r.x;
-      ctrl1= scalar_adjust_scale ~r:r.x c.ctrl1;
-      ctrl2= scalar_adjust_scale ~r:r.y c.ctrl2;
+    ctrl1= point_adjust_scale ?origin ~r c.ctrl1;
+    ctrl2= point_adjust_scale ?origin ~r c.ctrl2;
+    end_= point_scale ?origin ~r c.end_;
     }
   let a_scale ?origin ~r a= {
     a_start= point_scale ?origin ~r a.a_start ;
-      length= a.length *. r.y;
-      width= a.width *. r.x;
-      ctrl1= scalar_adjust_scale ~r:r.x a.ctrl1;
-      ctrl2= scalar_adjust_scale ~r:r.y a.ctrl2;
+    ctrl1= point_adjust_scale ?origin ~r a.ctrl1;
+    ctrl2= point_adjust_scale ?origin ~r a.ctrl2;
+    end_= point_scale ?origin ~r a.end_;
   }
   let o_scale ?origin ~r o= {
     o_start= point_scale ?origin ~r o.o_start ;
-      length= o.length *. r.y;
-      width= o.width *. r.x;
-      ctrl_h= scalar_adjust_scale ~r:r.x o.ctrl_h;
-      ctrl_v= scalar_adjust_scale ~r:r.y o.ctrl_v;
+    width= o.width *. r.x;
+    end_= point_scale ?origin ~r o.end_;
   }
   let hj_scale ?origin ~r hj=
     {
@@ -1567,8 +1559,8 @@ module Transform = struct
     {
       htaj_start= point_scale ?origin ~r htaj.htaj_start;
       h1_length= htaj.h1_length *. r.x;
-      t_end= point_scale ?origin ~r htaj.t_end;
       h2_length= htaj.h2_length *. r.x;
+      a_end= point_scale ?origin ~r htaj.a_end;
       a_radius= scalar_adjust_scale ~r:(diagonal r) htaj.a_radius;
       end_= point_adjust_scale ?origin ~r htaj.end_;
     }
@@ -1736,7 +1728,6 @@ module Transform = struct
     let pt= point_adjust_scale ?origin ~r in
     {
       wtd_start= point_scale ?origin ~r wtd.wtd_start;
-      v_length= scalar_adjust_scale ~r:r.y wtd.v_length;
       ctrl1= pt wtd.ctrl1;
       ctrl2= pt wtd.ctrl2;
       t_end= point_scale ?origin ~r wtd.t_end;
@@ -1782,7 +1773,7 @@ module Transform = struct
       cj_start= cj.cj_start;
       ctrl1= pt cj.ctrl1;
       ctrl2= pt cj.ctrl2;
-      t_end= point_scale ?origin ~r cj.t_end;
+      c_end= point_scale ?origin ~r cj.c_end;
       end_= pt cj.end_;
     }
   let fpj_scale ?origin ~r fpj=
@@ -1791,7 +1782,7 @@ module Transform = struct
       fpj_start= point_scale ?origin ~r fpj.fpj_start;
       ctrl1= pt fpj.ctrl1;
       ctrl2= pt fpj.ctrl2;
-      t_end= point_scale ?origin ~r fpj.t_end;
+      p_end= point_scale ?origin ~r fpj.p_end;
       end_= pt fpj.end_;
     }
   let pj_scale ?origin ~r pj=
@@ -1800,19 +1791,19 @@ module Transform = struct
       pj_start= point_scale ?origin ~r pj.pj_start;
       ctrl1= pt pj.ctrl1;
       ctrl2= pt pj.ctrl2;
-      t_end= point_scale ?origin ~r pj.t_end;
+      p_end= point_scale ?origin ~r pj.p_end;
       end_= pt pj.end_;
     }
-  let thtaj_scale ?origin ~r thtaj=
+  let thtaj_scale ?origin ~r (thtaj:thtaj)=
     let pt= point_adjust_scale ?origin ~r in
     {
       thtaj_start= point_scale ?origin ~r thtaj.thtaj_start;
       ctrl1= pt thtaj.ctrl1;
       ctrl2= pt thtaj.ctrl1;
-      t1_end= point_scale ?origin ~r thtaj.t1_end;
+      t_end= point_scale ?origin ~r thtaj.t_end;
       h1_length= thtaj.h1_length *. r.x;
-      t2_end= point_scale ?origin ~r thtaj.t2_end;
       h2_length= thtaj.h2_length *. r.x;
+      a_end= point_scale ?origin ~r thtaj.a_end;
       a_radius= scalar_adjust_scale ~r:(diagonal r) thtaj.a_radius;
       end_= pt thtaj.end_;
     }
@@ -1961,3 +1952,11 @@ module Transform = struct
     | Thtaj thtaj-> Thtaj (thtaj_scale ?origin ~r thtaj)
     | Tod tod-> Tod (tod_scale ?origin ~r tod)
 end
+
+type to_path=
+  | Stroke_path of (t -> GlyphPath.Path.t)
+  | Outline_path of (?width:float -> t -> GlyphPath.Path.t list)
+
+type to_frame=
+  | Stroke_frame of (t -> GlyphPath.Path.frame)
+  | Outline_frame of (t -> ?width:float -> GlyphPath.Path.frame)

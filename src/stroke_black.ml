@@ -11,6 +11,7 @@
 open Stroke_def
 
 module To_path = struct
+  open GlyphPath.Point
   module Path = GlyphPath.Path
 
   let circle_ctrl_distance ?(seg=4) r=
@@ -20,9 +21,10 @@ module To_path = struct
      [ratio] is based on the length between [start] and [end']
    *)
   let template_curve ~start ~end' ~ratio=
+    let open Point in
+    let open Ops in
+    let open Float in
     let vec, length=
-      let open Point in
-      let open Float in
       let vec= end' - start in
       let length= (pow vec.x 2.) +. (pow vec.y 2.) |> sqrt in
       (vec, length)
@@ -30,7 +32,7 @@ module To_path = struct
     let open Point in
     let angle= angle vec -. angle {x=0.;y=1.} in
     let rotate= rotate ~angle in
-    let point= rotate (ratio <* length) in
+    let point= rotate (ratio *< length) in
     start + point
 
   (*
@@ -550,10 +552,15 @@ module To_path = struct
       (* 5. p_start is to the bottom left of p_start *)
   *)
 
-  let from_ufp ufp=
+  let from_ufp ?(width=8.) ufp=
     let open Path in
-    let start= ufp.ufp_start
-    and p_start= ufp.p_start in
+    let p_start= ufp.p_start in
+    let start= get_adjust ufp.ufp_start
+      ~f:(fun()->
+        let x= p_start.x -. 2. *. width
+        and y= p_start.y +. 2. *. width in
+        Point.{x;y})
+    in
     let width= ufp.end_.x -. p_start.x
     and height= ufp.end_.y -. p_start.y in
     let ctrl1= get_adjust ufp.ctrl1
@@ -576,32 +583,32 @@ module To_path = struct
   (*
     type c= {
       c_start: point;
-      length: float;
-      width: float;
       ctrl1: float adjust;
       ctrl2: float adjust;
+      end_: point;
     } (* Clockwise curve *)
   *)
 
   let from_c c=
     let open Path in
-    let start= c.c_start in
-    let right= Point.{ x= start.x +. c.width; y= start.y +. c.length /. 2. } in
-    let end'=  { start with y= start.y +. c.length } in
-    let distance_h= circle_ctrl_distance ~seg:4  c.width
-    and distance_v= circle_ctrl_distance ~seg:4  (c.length /. 2.) in
-    let curve1=
-      let ctrl1= { start with x= start.x +. distance_h }
-      and ctrl2= { right with y= right.y -. distance_v }
-      and end'= right in
-      Ccurve {ctrl1; ctrl2; end'}
-    and curve2=
-      let ctrl1= { right with y= right.y +. distance_v }
-      and ctrl2= { end' with x= end'.x +. distance_h }
-      and end'= end' in
-      Ccurve {ctrl1; ctrl2; end'}
+    let open Point in
+    let start= c.c_start
+    and end'= c.end_ in
+    let vec_c= Ops.(end' - start) in
+    let vec_anti90= Matrix.(apply anticlock_90 vec_c) in
+    let length= distance vec_c in
+    let r= length /. 2. in
+    let ctrl1, ctrl2=
+      let ctrl_vec=
+        Line.extended_vec ~vec:vec_anti90
+          (circle_ctrl_distance ~seg:2 r) in
+      let ctrl1= get_adjust c.ctrl1 ~f:(fun ()->
+        Ops.(start + ctrl_vec)) in
+      let ctrl2= get_adjust c.ctrl2 ~f:(fun ()->
+        Ops.(end' + ctrl_vec)) in
+      (ctrl1, ctrl2)
     in
-    let segments= [curve1; curve2] in
+    let segments= [Ccurve {ctrl1; ctrl2; end'}] in
     {
       start;
       segments;
@@ -610,33 +617,32 @@ module To_path = struct
   (*
     type a= {
       a_start: point;
-      length: float;
-      width: float;
-      ctrl1: float adjust;
-      ctrl2: float adjust;
+      ctrl1: point adjust;
+      ctrl2: point adjust;
       end_: point;
     } (* Anticlockwise curve *)
   *)
 
   let from_a a=
     let open Path in
-    let start= a.a_start in
-    let left= Point.{ x= start.x -. a.width; y= start.y +. a.length /. 2. } in
-    let end'=  { start with y= start.y +. a.length } in
-    let distance_h= circle_ctrl_distance ~seg:4  a.width
-    and distance_v= circle_ctrl_distance ~seg:4  (a.length /. 2.) in
-    let curve1=
-      let ctrl1= { start with x= start.x -. distance_h }
-      and ctrl2= { left with y= left.y -. distance_v }
-      and end'= left in
-      Ccurve {ctrl1; ctrl2; end'}
-    and curve2=
-      let ctrl1= { left with y= left.y +. distance_v }
-      and ctrl2= { end' with x= end'.x -. distance_h }
-      and end'= end' in
-      Ccurve {ctrl1; ctrl2; end'}
+    let open Point in
+    let start= a.a_start
+    and end'= a.end_ in
+    let vec_c= Ops.(end' - start) in
+    let vec_clock90= Matrix.(apply clockwise_90 vec_c) in
+    let length= distance vec_c in
+    let r= length /. 2. in
+    let ctrl1, ctrl2=
+      let ctrl_vec=
+        Line.extended_vec ~vec:vec_clock90
+          (circle_ctrl_distance ~seg:2 r) in
+      let ctrl1= get_adjust a.ctrl1 ~f:(fun ()->
+        Ops.(start + ctrl_vec)) in
+      let ctrl2= get_adjust a.ctrl2 ~f:(fun ()->
+        Ops.(end' + ctrl_vec)) in
+      (ctrl1, ctrl2)
     in
-    let segments= [curve1; curve2] in
+    let segments= [Ccurve {ctrl1; ctrl2; end'}] in
     {
       start;
       segments;
@@ -645,47 +651,52 @@ module To_path = struct
   (*
     type o= {
       o_start: point;
-      length: float;
       width: float;
-      ctrl_h: float adjust;
-      ctrl_v: float adjust;
+      end_: point;
     } (* Oval *)
   *)
 
   let from_o o=
     let open Path in
-    let start= o.o_start in
-    let up= start in
-    let down= { up with y= up.y +. o.length } in
-    let right= Point.{
-      x= up.x +. o.width /. 2.;
-      y= up.y +. o.length /. 2.
-    } in
-    let left= { right with x= right.x -. o.width } in
-    let distance_h= circle_ctrl_distance ~seg:4  (o.width /. 2.)
-    and distance_v= circle_ctrl_distance ~seg:4  (o.length /. 2.) in
-    let curve1=
-      let ctrl1= { up with x= up.x +. distance_h }
-      and ctrl2= { right with y= right.y -. distance_v }
-      and end'= right in
-      Ccurve {ctrl1; ctrl2; end'}
-    and curve2=
-      let ctrl1= { right with y= right.y +. distance_v }
-      and ctrl2= { down with x= down.x +. distance_h }
-      and end'= down in
-      Ccurve {ctrl1; ctrl2; end'}
-    and curve3=
-      let ctrl1= { down with x= down.x -. distance_h }
-      and ctrl2= { left with y= left.y +. distance_v }
-      and end'= left in
-      Ccurve {ctrl1; ctrl2; end'}
-    and curve4=
-      let ctrl1= { left with y= left.y -. distance_v }
-      and ctrl2= { up with x= up.x -. distance_h }
-      and end'= left in
-      Ccurve {ctrl1; ctrl2; end'}
+    let open Point in
+    let start= o.o_start
+    and end'= o.end_ in
+    let vec_o= Ops.(end' - start) in
+    let vec_o_rev= neg vec_o in
+    let width= o.width
+    and length= distance vec_o in
+    let vec_clock90= Matrix.(apply clockwise_90 vec_o)
+    and vec_anti90= Matrix.(apply anticlock_90 vec_o) in
+    let vec_right= Line.extended_vec ~vec:vec_anti90 (width/.2.)
+    and vec_left= Line.extended_vec ~vec:vec_clock90 (width/.2.)
+    and vec_down= Line.extended_vec ~vec:vec_o (length/.2.)
+    and vec_up= Line.extended_vec ~vec:vec_o_rev (length/.2.) in
+    let left, right=
+      let middle= Ops.((start + end') /< 2.) in
+      Ops.(middle + vec_left, middle + vec_right)
     in
-    let segments= [curve1; curve2; curve3; curve4] in
+    let arc_u_r=
+      let ctrl1= Ops.(start + vec_right /< 2.)
+      and ctrl2= Ops.(right + vec_up /< 2.)
+      and end'= right in
+      Ccurve {ctrl1; ctrl2;end'}
+    and arc_d_r=
+      let ctrl1= Ops.(right + vec_down /< 2.)
+      and ctrl2= Ops.(end' + vec_right /< 2.)
+      and end'= end' in
+      Ccurve {ctrl1; ctrl2;end'}
+    and arc_d_l=
+      let ctrl1= Ops.(end' + vec_left /< 2.)
+      and ctrl2= Ops.(left + vec_down /< 2.)
+      and end'= left in
+      Ccurve {ctrl1; ctrl2;end'}
+    and arc_u_l=
+      let ctrl1= Ops.(left + vec_up /< 2.)
+      and ctrl2= Ops.(start + vec_left /< 2.)
+      and end'= start in
+      Ccurve {ctrl1; ctrl2;end'}
+    in
+    let segments= [arc_u_r; arc_d_r; arc_d_l; arc_u_l] in
     {
       start;
       segments;
@@ -908,9 +919,10 @@ module To_path = struct
       let end_= get_adjust htj.end_ ~f:(fun ()->
         let open Float in
         let open Point in
+        let open Ops in
         let line= t_end - t_start in
         let d= pow line.x 2. +. pow line.y 2. |> sqrt in
-        Point.{ x= t_end.x -. d/.8.; y= t_end.y -. d/.8. })
+        { x= t_end.x -. d/.8.; y= t_end.y -. d/.8. })
       in
       Line end_;
     in
@@ -1163,51 +1175,61 @@ module To_path = struct
     type htaj= {
       htaj_start: point;
       h1_length: float;
-      t_end: point;
       h2_length: float;
+      a_end: point;
       a_radius: float adjust;
       end_: point adjust;
     } (* Horizontal – Throw – Anticlockwise curve – J hook *)
   *)
 
   let from_htaj (htaj:htaj)=
+    let open Point in
     let a_radius= get_adjust htaj.a_radius ~f:(fun ()->
       let avg= (htaj.h1_length +. htaj.h2_length) /. 2. in
-      avg /. 8.)
+      avg /. 6.)
     in
     let start= htaj.htaj_start in
     let h1_end= { start with x= start.x +. htaj.h1_length } in
-    let t_end= htaj.t_end in
-    let h2_start= { t_end with
-      y= t_end.y +. a_radius *. 2.;
+    let a_end= htaj.a_end in
+    let h2_start= { a_end with
+      x= a_end.x -. htaj.h2_length;
     } in
-    let h2_end= { h2_start with x= h2_start.x +. htaj.h2_length } in
+    let vec_h2= Ops.(a_end - h2_start) in
+    let h2_length= distance vec_h2 in
+    let end'= get_adjust htaj.end_ ~f:(fun()->
+      { a_end with y= a_end.y -. h2_length *. 0.2}) in
+    let vec_h2= Ops.(htaj.a_end - h2_start) in
+    let vec_h2_anti90= Matrix.(apply anticlock_90 vec_h2) in
+    let a_center= Ops.(h2_start +
+      Line.extended_vec ~vec:vec_h2_anti90 a_radius) in
+    let vec_center_start= Ops.(h1_end - a_center) in
+    let t_end=
+      let vec= Matrix.(apply anticlock_90 vec_center_start) in
+      Ops.(a_center + Line.extended_vec ~vec a_radius)
+    in
+    let vec_t= Ops.(t_end - h1_end) in
+    let t_length= distance vec_t in
+    let t_c= Ops.(
+      (t_end+h1_end) /< 2. +
+      Line.extended_vec
+        ~vec:Matrix.(apply clockwise_90 vec_t)
+        (t_length*.0.05)) in
+    let h2_c= Ops.(
+      (h2_start+a_end) /< 2. +
+      Line.extended_vec
+        ~vec:Matrix.(apply clockwise_90 vec_h2)
+        (h2_length*.0.05)) in
+    let a_c=
+      let line1= Line.of_points t_c t_end
+      and line2= Line.of_points h2_start h2_c in
+      Line.(intersection_of_lines line1 line2 |> get_intersection_point)in
     let open Path in
-    let curve=
-      let vec= Point.(t_end - h1_end) in
-      let a_d= a_radius in
-      let unit=
-        Float.pow a_d 2.
-          /. (1. +. Float.pow (vec.y /. vec.x) 2.)
-          |> sqrt
-      in
-      let ctrl1=
-        let dx= unit and dy= (vec.y /. vec.x) *. unit |> Float.abs in
-        Point.{ x= t_end.x -. dx; y= t_end.y +. dy }
-      and ctrl2= { h2_start with x= h2_start.x -. a_d }
-      and end'= h2_start in
-      Ccurve {ctrl1; ctrl2; end'}
-    in
-    let end_= get_adjust htaj.end_ ~f:(fun ()->
-      let d= htaj.h2_length /. 4. in
-      { h2_end with y= h2_end.y -. d })
-    in
     let segments= [
       Line h1_end;
-      Line t_end;
-      curve;
-      Line h2_end;
-      Line end_;
+      Qcurve {ctrl= t_c; end'= t_end};
+      Qcurve {ctrl= a_c; end'= h2_start};
+      Qcurve {ctrl= h2_c; end'= a_end};
+      Line end';
     ] in
     {
       start;
@@ -1407,10 +1429,10 @@ module To_path = struct
         let open Point in
         let c_start= htcj.t_end in
         let c_end= htcj.c_end in
-        let line= c_end - c_start in
+        let line= Ops.(c_end - c_start) in
         let length= (pow line.x 2.) +. (pow line.y 2.) |> sqrt in
         let d= Float.pow (length /. 4.) 2. /. 2. |> sqrt in
-        Point.{ x= c_end.x -. d; y= c_end.y -. d; })
+        { x= c_end.x -. d; y= c_end.y -. d; })
       in
       Line end_
     in
@@ -2239,7 +2261,7 @@ module To_path = struct
     let length=
       let open Point in
       let open Float in
-      let vec= cj.t_end - cj.cj_start in
+      let vec= Ops.(cj.c_end - cj.cj_start) in
       (pow vec.x 2.) +. (pow vec.y 2.) |> sqrt
     in
     let open Path in
@@ -2249,14 +2271,14 @@ module To_path = struct
         t'_start= cj.cj_start;
         ctrl1= cj.ctrl2;
         ctrl2= cj.ctrl2;
-        end_= cj.t_end
+        end_= cj.c_end
         }
       in
       List.hd t.segments
     in
     let j=
       let end'= get_adjust cj.end_ ~f:(fun ()->
-        let t_end= cj.t_end in
+        let t_end= cj.c_end in
         let d=
           Float.pow (length /. 4.) 2.
           /. 2. |> sqrt in
@@ -2286,18 +2308,18 @@ module To_path = struct
       fp_start= fpj.fpj_start;
       ctrl1= fpj.ctrl1;
       ctrl2= fpj.ctrl2;
-      end_= fpj.t_end;
+      end_= fpj.p_end;
     } in
     let fp= from_fp fp in
     let open Float in
     let length=
-      let line= Point.(fpj.t_end - fpj.fpj_start) in
+      let line= Point.Ops.(fpj.p_end - fpj.fpj_start) in
       (pow line.x 2.) +. (pow line.y 2.) |> sqrt
     in
     let j=
       let end'= get_adjust fpj.end_ ~f:(fun ()->
         let d= length /. 4. in
-        { fpj.t_end with y= fpj.t_end.y -. d }
+        { fpj.p_end with y= fpj.p_end.y -. d }
         )
       in
       Path.Line end'
@@ -2320,17 +2342,17 @@ module To_path = struct
       p_start= pj.pj_start;
       ctrl1= pj.ctrl1;
       ctrl2= pj.ctrl2;
-      end_= pj.t_end;
+      end_= pj.p_end;
     } in
     let length=
       let open Float in
-      let line= Point.(pj.t_end - pj.pj_start) in
+      let line= Point.Ops.(pj.p_end - pj.pj_start) in
       (pow line.x 2.) +. (pow line.y 2.) |> sqrt
     in
     let j=
       let end'= get_adjust pj.end_ ~f:(fun ()->
         let d= length /. 4. in
-        { pj.t_end with y= pj.t_end.y -. d }
+        { pj.p_end with y= pj.p_end.y -. d }
         )
       in
       Path.Line end'
@@ -2342,10 +2364,10 @@ module To_path = struct
       thtaj_start: point;
       ctrl1: point adjust;
       ctrl2: point adjust;
-      t1_end: point;
+      t_end: point;
       h1_length: float;
-      t2_end: point;
       h2_length: float;
+      a_end: point;
       a_radius: float adjust;
       end_: point adjust;
     } (* Throw – Horizontal – Throw – Anticlockwise curve – J hook *)
@@ -2356,12 +2378,12 @@ module To_path = struct
       t'_start= thtaj.thtaj_start;
       ctrl1= thtaj.ctrl1;
       ctrl2= thtaj.ctrl2;
-      end_= thtaj.t1_end;
+      end_= thtaj.t_end;
     }
     and htaj= from_htaj {
-      htaj_start= thtaj.t1_end;
+      htaj_start= thtaj.t_end;
       h1_length= thtaj.h1_length;
-      t_end= thtaj.t2_end;
+      a_end= thtaj.a_end;
       h2_length= thtaj.h2_length;
       a_radius= thtaj.a_radius;
       end_= thtaj.end_;
@@ -2395,11 +2417,11 @@ module To_path = struct
     and end_= get_adjust tod.end_ ~f:(fun ()->
       { start with y= start.y +. right_height *. 2. })
     in
-    let d2= get_adjust tod.ctrl2 ~f:(fun ()->
+    let c_left_h= get_adjust tod.ctrl2 ~f:(fun ()->
       right_width *. 4. /. 5.)
-    and d3= get_adjust tod.ctrl3 ~f:(fun ()->
+    and c_right_h= get_adjust tod.ctrl3 ~f:(fun ()->
       left_width /. 2.)
-    and d4= get_adjust tod.ctrl4 ~f:(fun ()->
+    and c_right_v= get_adjust tod.ctrl4 ~f:(fun ()->
       left_height *. 4. /. 7.)
     in
     let open Path in
@@ -2409,21 +2431,21 @@ module To_path = struct
           x= start.x -. right_width /. 6.;
           y= start.y +. right_height;
         })
-      and ctrl2= { bottom with x= bottom.x +. d2 }
+      and ctrl2= { bottom with x= bottom.x +. c_left_h }
       and end'= bottom in
       Ccurve {ctrl1; ctrl2; end'}
     and l2=
-      let ctrl1= { bottom with x= bottom.x -. d3 }
-      and ctrl2= { left with y= left.y +. d4 }
+      let ctrl1= { bottom with x= bottom.x -. c_right_h }
+      and ctrl2= { left with y= left.y +. c_right_v }
       and end'= left in
       Ccurve {ctrl1; ctrl2; end'}
     and l3=
-      let ctrl1= { left with y= left.y -. d4 }
-      and ctrl2= { up with x= up.x -. d3 }
+      let ctrl1= { left with y= left.y -. c_right_v }
+      and ctrl2= { up with x= up.x -. c_right_h }
       and end'= up in
       Ccurve {ctrl1; ctrl2; end'}
     and l4=
-      let ctrl1= { up with x= up.x +. d2 }
+      let ctrl1= { up with x= up.x +. c_left_h }
       and ctrl2= Point.{
         x= end_.x -. right_width /. 6.;
         y= end_.y -. right_height;
@@ -2500,7 +2522,9 @@ module To_path = struct
     | Tod tod-> from_tod tod
 end
 
-let to_path= To_path.to_path
-let to_frame t=
-  let frame, _last=t |> to_path |> Smaji_glyph_path.Path.frame in
+let to_path= Stroke_path To_path.to_path
+let to_frame_raw t=
+  let frame, _last=t |> To_path.to_path |> Smaji_glyph_path.Path.frame in
   frame
+let to_frame= Stroke_frame to_frame_raw
+
