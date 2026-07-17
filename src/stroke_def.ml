@@ -214,7 +214,7 @@ let tag_of_string= Tag.t_of_string
 let tag_to_string= Tag.t_to_string
 
 module GlyphPath = Smaji_glyph_path
-module Point = GlyphPath.Path.Point
+module Point = GlyphPath.Point
 type point= Point.t
 
 type 'a adjust=

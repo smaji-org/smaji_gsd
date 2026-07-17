@@ -29,14 +29,12 @@ module To_path(Width : sig val width : float end) = struct
    *)
   let template_curve ~start ~end' ~ratio=
     let open Float in
-    let open PointF in
     let open Ops in
     let vec, length=
       let vec= end' - start in
       let length= (pow vec.x 2.) +. (pow vec.y 2.) |> sqrt in
       (vec, length)
     in
-    let open PointF in
     let angle= angle vec -. angle {x=0.;y=1.} in
     let rotate= rotate ~angle in
     let point= rotate (ratio *< length) in
@@ -161,7 +159,6 @@ module To_path(Width : sig val width : float end) = struct
   (* pointed *)
   let from_u ?(width=Width.width) u=
     let open Path in
-    let open PointF in
     let start= u.u_start in
     let p0= start in
     let p1= u.end_ in
@@ -213,7 +210,6 @@ module To_path(Width : sig val width : float end) = struct
 
   let from_du ?(width=Width.width) du=
     let open Path in
-    let open PointF in
     let start= du.du_start in
     let joint= { x= start.x +. width*.1.8; y= start.y +. width*.0.3 } in
     let dot= get_adjust du.dot
@@ -425,7 +421,6 @@ module To_path(Width : sig val width : float end) = struct
 
   let from_t' ?(width=Width.width) (t:t')=
     let open Path in
-    let open PointF in
     let start= t.t'_start
     and end'= t.end_ in
     let vec_t= Ops.(end' - start) in
@@ -491,7 +486,6 @@ module To_path(Width : sig val width : float end) = struct
 
   let from_ft ?(width=Width.width) (ft:ft)=
     let open Path in
-    let open PointF in
     let start= ft.ft_start
     and end'= ft.end_ in
     let vec_t= Ops.(end' - start) in
@@ -559,7 +553,6 @@ module To_path(Width : sig val width : float end) = struct
 
   let from_wt ?(width=Width.width) wt=
     let open Path in
-    let open PointF in
     let start= wt.wt_start
     and end'= wt.end_ in
     let height= end'.y -. start.y in
@@ -3612,7 +3605,7 @@ module To_path(Width : sig val width : float end) = struct
     let v_end= { start with y= start.y +. vu.length } in
     let u_end= get_adjust vu.end_ ~f:(fun ()->
       let d= Float.pow (vu.length /. 3.) 2. /. 2. |> sqrt in
-      PointF.{x= v_end.x +. d; y= v_end.y -. d}
+      {x= v_end.x +. d; y= v_end.y -. d}
       ) in
     let down= {v_end with x= v_end.x+.width} in
     let end'= u_end in
@@ -4486,7 +4479,6 @@ module To_path(Width : sig val width : float end) = struct
 
   let from_tu ?(width=Width.width) tu=
     let open Path in
-    let open PointF in
     let start= tu.tu_start
     and t_end= tu.t_end in
     let vec_t= Ops.(t_end - start) in
@@ -5823,7 +5815,6 @@ module To_path(Width : sig val width : float end) = struct
     and c_right_v= get_adjust tod.ctrl4 ~f:(fun ()->
       left_height *. 4. /. 7.)
     in
-    let open Path in
     (*
     let l1=
       let ctrl1= get_adjust tod.ctrl1 ~f:(fun ()->

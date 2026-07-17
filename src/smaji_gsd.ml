@@ -17,7 +17,7 @@ module Stroke_def= Stroke_def
 module Stroke_black= Stroke_black
 module Stroke_ming= Stroke_ming
 module Path= Smaji_glyph_path.Path
-module Point= Path.Point
+module Point= Smaji_glyph_path.Point
 
 module EzxmlmFix = struct
   include Ezxmlm

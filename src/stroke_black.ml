@@ -11,8 +11,8 @@
 open Stroke_def
 
 module To_path = struct
-  open GlyphPath.Point
-  module Path = GlyphPath.Path
+  open GlyphPath
+  open Point
 
   let circle_ctrl_distance ?(seg=4) r=
     r *. 4. /. 3. *. tan(Float.pi /. (2. *. (Float.of_int seg)))
