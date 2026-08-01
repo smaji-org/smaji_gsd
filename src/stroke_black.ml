@@ -8,6 +8,7 @@
  * This file is a part of Smaji_gsd.
  *)
 
+open! Smaji_glyph_path.Bugfix
 open Stroke_def
 
 module To_path = struct
@@ -29,9 +30,8 @@ module To_path = struct
       let length= (pow vec.x 2.) +. (pow vec.y 2.) |> sqrt in
       (vec, length)
     in
-    let open Point in
-    let angle= angle vec -. angle {x=0.;y=1.} in
-    let rotate= rotate ~angle in
+    let radian= radian vec -. radian {x=0.;y=1.} in
+    let rotate= rotate ~radian in
     let point= rotate (ratio *< length) in
     start + point
 
@@ -600,7 +600,7 @@ module To_path = struct
     let r= length /. 2. in
     let ctrl1, ctrl2=
       let ctrl_vec=
-        Line.extended_vec ~vec:vec_anti90
+        Line.extended_vec vec_anti90
           (circle_ctrl_distance ~seg:2 r) in
       let ctrl1= get_adjust c.ctrl1 ~f:(fun ()->
         Ops.(start + ctrl_vec)) in
@@ -634,7 +634,7 @@ module To_path = struct
     let r= length /. 2. in
     let ctrl1, ctrl2=
       let ctrl_vec=
-        Line.extended_vec ~vec:vec_clock90
+        Line.extended_vec vec_clock90
           (circle_ctrl_distance ~seg:2 r) in
       let ctrl1= get_adjust a.ctrl1 ~f:(fun ()->
         Ops.(start + ctrl_vec)) in
@@ -667,10 +667,10 @@ module To_path = struct
     and length= distance vec_o in
     let vec_clock90= Matrix.(apply clockwise_90 vec_o)
     and vec_anti90= Matrix.(apply anticlock_90 vec_o) in
-    let vec_right= Line.extended_vec ~vec:vec_anti90 (width/.2.)
-    and vec_left= Line.extended_vec ~vec:vec_clock90 (width/.2.)
-    and vec_down= Line.extended_vec ~vec:vec_o (length/.2.)
-    and vec_up= Line.extended_vec ~vec:vec_o_rev (length/.2.) in
+    let vec_right= Line.extended_vec vec_anti90 (width/.2.)
+    and vec_left= Line.extended_vec vec_clock90 (width/.2.)
+    and vec_down= Line.extended_vec vec_o (length/.2.)
+    and vec_up= Line.extended_vec vec_o_rev (length/.2.) in
     let left, right=
       let middle= Ops.((start + end') /< 2.) in
       Ops.(middle + vec_left, middle + vec_right)
@@ -1201,23 +1201,23 @@ module To_path = struct
     let vec_h2= Ops.(htaj.a_end - h2_start) in
     let vec_h2_anti90= Matrix.(apply anticlock_90 vec_h2) in
     let a_center= Ops.(h2_start +
-      Line.extended_vec ~vec:vec_h2_anti90 a_radius) in
+      Line.extended_vec vec_h2_anti90 a_radius) in
     let vec_center_start= Ops.(h1_end - a_center) in
     let t_end=
       let vec= Matrix.(apply anticlock_90 vec_center_start) in
-      Ops.(a_center + Line.extended_vec ~vec a_radius)
+      Ops.(a_center + Line.extended_vec vec a_radius)
     in
     let vec_t= Ops.(t_end - h1_end) in
     let t_length= distance vec_t in
     let t_c= Ops.(
       (t_end+h1_end) /< 2. +
       Line.extended_vec
-        ~vec:Matrix.(apply clockwise_90 vec_t)
+        Matrix.(apply clockwise_90 vec_t)
         (t_length*.0.05)) in
     let h2_c= Ops.(
       (h2_start+a_end) /< 2. +
       Line.extended_vec
-        ~vec:Matrix.(apply clockwise_90 vec_h2)
+        Matrix.(apply clockwise_90 vec_h2)
         (h2_length*.0.05)) in
     let a_c=
       let line1= Line.of_points t_c t_end

@@ -8,5 +8,6 @@
  * This file is a part of Smaji_gsd.
  *)
 
+open! Smaji_glyph_path.Bugfix
 include Stroke_def
 include Stroke_black

@@ -8,6 +8,7 @@
  * This file is a part of Smaji_gsd.
  *)
 
+open! Smaji_glyph_path.Bugfix
 open Stroke_def
 
 open GlyphPath
@@ -35,8 +36,8 @@ module To_path(Width : sig val width : float end) = struct
       let length= (pow vec.x 2.) +. (pow vec.y 2.) |> sqrt in
       (vec, length)
     in
-    let angle= angle vec -. angle {x=0.;y=1.} in
-    let rotate= rotate ~angle in
+    let radian= radian vec -. radian {x=0.;y=1.} in
+    let rotate= rotate ~radian in
     let point= rotate (ratio *< length) in
     start + point
 
@@ -162,30 +163,27 @@ module To_path(Width : sig val width : float end) = struct
     let start= u.u_start in
     let p0= start in
     let p1= u.end_ in
-    let slope=
-      let l= Ops.(p1 - p0) in
-      l.y /. l.x
-    in
-    let orth= Line.orth slope in
+    let vec= Ops.(p1 - p0) in
+    let vec_clock90= Matrix.(apply clockwise_90 vec) in
     let c1=
       let c= Ops.((p0 + p1) / {x=2.;y=2.}) in
-      Ops.(Line.extended_slope ~slope:orth (width*.0.5) + c)
+      Ops.(Line.extended_vec vec_clock90 (width*.0.5) + c)
     in
-    let p2= Ops.(Line.extended_slope ~slope:orth (width/.4.) + p1) in
+    let p2= Ops.(Line.extended_vec vec_clock90 (width/.4.) + p1) in
     let p3=
-      let c= Ops.(Line.extended_slope ~slope (width*.0.8) + p0) in
-      Ops.(Line.extended_slope ~slope:orth (width*.1.0) + c)
+      let c= Ops.(Line.extended_vec vec (width*.0.8) + p0) in
+      Ops.(Line.extended_vec vec_clock90 (width*.1.0) + c)
     in
     let c3=
       let c= Ops.((p2 + p3) / {x=2.1;y=2.}) in
-      Ops.(Line.extended_slope ~slope:orth (width*.0.8) + c)
+      Ops.(Line.extended_vec vec_clock90 (width*.0.8) + c)
     in
     let p4=
-      let c= Ops.(Line.extended_slope ~slope (width*.0.4) + p0) in
-      Ops.(Line.extended_slope ~slope:orth (width*.1.3) + c)
+      let c= Ops.(Line.extended_vec vec (width*.0.4) + p0) in
+      Ops.(Line.extended_vec vec_clock90 (width*.1.3) + c)
     in
-    let c4= Ops.(Line.extended_slope ~slope (width/.4.) + p4) in
-    let c5= Ops.(Line.extended_slope ~slope (-.width/.4.) + p4) in
+    let c4= Ops.(Line.extended_vec vec (width/.4.) + p4) in
+    let c5= Ops.(Line.extended_vec vec (-.width/.4.) + p4) in
     let segments= [
       Qcurve { ctrl= c1; end'= p1 };
       Line p2;
@@ -218,58 +216,58 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j_s= Ops.(start - joint)
     and vec_j_u= Ops.(du.end_ - joint)
     and vec_j_d= Ops.(dot - joint) in
-    let slope_u= vec_j_u.y /. vec_j_u.x in
+    let vec_j_u_clock90= Matrix.(apply clockwise_90 vec_j_u) in
     let vec_unit_j_s= Line.unit_vector vec_j_s
     and vec_unit_j_u= Line.unit_vector vec_j_u
     and vec_unit_j_d= Line.unit_vector vec_j_d in
     let vec_mid_s_u= Line.vector_sum [vec_unit_j_s;vec_unit_j_u]
     and vec_mid_u_d= Line.vector_sum [vec_unit_j_u;vec_unit_j_d]
     and vec_mid_s_d= Line.vector_sum [vec_unit_j_s;vec_unit_j_d] in
-    let left_p0= Ops.(start - Line.extended_vec ~vec:{x=0.; y=1.} (width*.0.25)) in
-    let left_p1= Ops.(start + Line.extended_vec ~vec:{x=0.; y=1.} (width*.0.25)) in
-    let p_s_u= Ops.(joint + Line.extended_vec ~vec:vec_mid_s_u (width*.0.5)) in
+    let left_p0= Ops.(start - Line.extended_vec {x=0.; y=1.} (width*.0.25)) in
+    let left_p1= Ops.(start + Line.extended_vec {x=0.; y=1.} (width*.0.25)) in
+    let p_s_u= Ops.(joint + Line.extended_vec vec_mid_s_u (width*.0.5)) in
     let p_s_u_c_left= Ops.(-) p_s_u @@
-      Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_mid_s_u) (width*. 0.5)
+      Line.extended_vec Matrix.(apply clockwise_90 vec_mid_s_u) (width*. 0.5)
     and p_s_u_c_right= Ops.(+) p_s_u @@
-      Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_mid_s_u) (width*. 0.5) in
-    let p_u_d= Ops.(joint + Line.extended_vec ~vec:vec_mid_u_d (width*.0.75)) in
+      Line.extended_vec Matrix.(apply clockwise_90 vec_mid_s_u) (width*. 0.5) in
+    let p_u_d= Ops.(joint + Line.extended_vec vec_mid_u_d (width*.0.75)) in
     let p_u_d_c= Ops.(-) p_u_d @@
-      Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_mid_u_d) (width*. 0.3)
+      Line.extended_vec Matrix.(apply clockwise_90 vec_mid_u_d) (width*. 0.3)
     in
     let dot_right=
-      let dot_up= Ops.(dot - Line.extended_vec ~vec:vec_j_d (width*.0.8)) in
-      Ops.(dot_up + Line.extended_vec ~vec:Matrix.(apply anticlock_90 vec_j_d) (width*.0.8))
+      let dot_up= Ops.(dot - Line.extended_vec vec_j_d (width*.0.8)) in
+      Ops.(dot_up + Line.extended_vec Matrix.(apply anticlock_90 vec_j_d) (width*.0.8))
     in
     let mid_p_u_d_dot_right= Ops.((p_u_d + dot_right) / {x=2.1;y=2.05}) in
     let mid_p_u_d_dot_right_c= Ops.(p_u_d +
-      (Line.extended_vec ~vec:(p_u_d - p_u_d_c) (width*. 0.5)))
+      (Line.extended_vec (p_u_d - p_u_d_c) (width*. 0.5)))
     in
     let dot_right_c= Ops.(mid_p_u_d_dot_right +
-      (Line.extended_vec ~vec:(mid_p_u_d_dot_right - mid_p_u_d_dot_right_c) (width*. 0.4)))
+      (Line.extended_vec (mid_p_u_d_dot_right - mid_p_u_d_dot_right_c) (width*. 0.4)))
     in
     let dot_c= Ops.(dot_right +
-      (Line.extended_vec ~vec:(dot_right - dot_right_c) (width*. 0.7)))
+      (Line.extended_vec (dot_right - dot_right_c) (width*. 0.7)))
     in
     let dot_left=
-      let dot_up= Ops.(dot - Line.extended_vec ~vec:vec_j_d (width*.0.3)) in
-      Ops.(dot_up + Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_j_d) (width*.0.4))
+      let dot_up= Ops.(dot - Line.extended_vec vec_j_d (width*.0.3)) in
+      Ops.(dot_up + Line.extended_vec Matrix.(apply clockwise_90 vec_j_d) (width*.0.4))
     in
     let dot_left_c= Ops.(dot +
-      (Line.extended_vec ~vec:(dot - dot_c) (width*. 0.3)))
+      (Line.extended_vec (dot - dot_c) (width*. 0.3)))
     in
-    let p_s_d= Ops.(joint + {x=width*.0.2;y=width*.0.3} + Line.extended_vec ~vec:vec_mid_s_d (width*.0.6)) in
+    let p_s_d= Ops.(joint + {x=width*.0.2;y=width*.0.3} + Line.extended_vec vec_mid_s_d (width*.0.6)) in
     let mid_dot_left_p_s_d= Ops.((p_s_d + dot_left) / {x=1.9;y=1.95}) in
     let mid_dot_left_p_s_d_c= Ops.(dot_left +
-      (Line.extended_vec ~vec:(dot_left - dot_left_c) (width*. 0.2)))
+      (Line.extended_vec (dot_left - dot_left_c) (width*. 0.2)))
     in
     let p_s_d_c= Ops.(mid_dot_left_p_s_d +
-      (Line.extended_vec ~vec:(mid_dot_left_p_s_d - mid_dot_left_p_s_d_c) (width*. 0.8)))
+      (Line.extended_vec (mid_dot_left_p_s_d - mid_dot_left_p_s_d_c) (width*. 0.8)))
     in
     let p_s_d_start_c= Ops.(p_s_d +
-      (Line.extended_vec ~vec:(p_s_d - p_s_d_c) (width*. 0.6)))
+      (Line.extended_vec (p_s_d - p_s_d_c) (width*. 0.6)))
     in
-    let end_p0= Ops.(du.end_ + Line.extended_slope ~slope:(Line.orth slope_u) (width*. -0.15))
-    and end_p1= Ops.(du.end_ + Line.extended_slope ~slope:(Line.orth slope_u) (width*. 0.15)) in
+    let end_p0= Ops.(du.end_ + Line.extended_vec vec_j_u_clock90 (width*. -0.15))
+    and end_p1= Ops.(du.end_ + Line.extended_vec vec_j_u_clock90 (width*. 0.15)) in
     let segments= [
       Qcurve { ctrl= p_s_u_c_left; end'= p_s_u };
       Qcurve { ctrl= p_s_u_c_right; end'= end_p0 };
@@ -424,28 +422,28 @@ module To_path(Width : sig val width : float end) = struct
     let start= t.t'_start
     and end'= t.end_ in
     let vec_t= Ops.(end' - start) in
-    let angle_t= angle vec_t in
+    let angle_t= radian vec_t in
     let p1_angle= angle_t -. pi/.1.8 in
     let p2_angle= p1_angle +. pi*.0.65 in
     let p1= Ops.(+) start @@
-      Line.extended_angle ~angle:p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:p1_angle (width*. 1.3)
     in
     let p2= Ops.(+) p1 @@
-      Line.extended_angle ~angle:p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:p2_angle (width*. 0.4)
     in
     let p3= Ops.(+) end' @@
-      Line.extended_angle ~angle:p1_angle (width*. 0.2)
+      Line.extended_angle ~radian:p1_angle (width*. 0.2)
     in
     let t_down=
       let calc_ctrl= template_curve ~start:p2 ~end':p3 in
       let ctrl1= match t.ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.10; y= 0.25}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match t.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.09; y= 0.75}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= p3 }
     in
@@ -489,28 +487,28 @@ module To_path(Width : sig val width : float end) = struct
     let start= ft.ft_start
     and end'= ft.end_ in
     let vec_t= Ops.(end' - start) in
-    let angle_t= angle vec_t in
+    let angle_t= radian vec_t in
     let p1_angle= angle_t -. pi/.1.8 in
     let p2_angle= p1_angle +. pi*.0.65 in
     let p1= Ops.(+) start @@
-      Line.extended_angle ~angle:p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:p1_angle (width*. 1.3)
     in
     let p2= Ops.(+) p1 @@
-      Line.extended_angle ~angle:p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:p2_angle (width*. 0.4)
     in
     let p3= Ops.(+) end' @@
-      Line.extended_angle ~angle:p1_angle (width*. 0.2)
+      Line.extended_angle ~radian:p1_angle (width*. 0.2)
     in
     let t_down=
       let calc_ctrl= template_curve ~start:p2 ~end':p3 in
       let ctrl1= match ft.ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.06; y= 0.25}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match ft.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.04; y= 0.75}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= p3 }
     in
@@ -559,12 +557,12 @@ module To_path(Width : sig val width : float end) = struct
     let v_length= max width @@ get_adjust wt.v_length
       ~f:(fun()-> height *. 0.4) in
     let vec_t= Ops.(end' - { start with y= start.y+.v_length}) in
-    let angle_t= angle vec_t in
+    let angle_t= radian vec_t in
     let p1= Ops.(+) start {x=width*.1.4; y= width*.0.4} in
     let p2= Ops.(+) p1 {x= -. width*.0.4; y= width*.0.4} in
     let p3= Ops.(+) p2 {x= 0.; y= v_length -. width*.0.8} in
     let r_end= Ops.(+) end' @@
-      Line.extended_angle ~angle:(angle_t -. pi/.1.8) (width*. 0.2)
+      Line.extended_angle ~radian:(angle_t -. pi/.1.8) (width*. 0.2)
     in
     let r_ctrl1, r_ctrl2=
       let calc_ctrl= template_curve ~start:p3 ~end':r_end in
@@ -575,12 +573,12 @@ module To_path(Width : sig val width : float end) = struct
           { ctrl with x }
         | Specify p-> Ops.(+) p @@
           Line.extended_angle
-            ~angle:(angle_t-. (pi*.0.5)) (width*. 0.8)
+            ~radian:(angle_t-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match wt.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.09; y= 0.75}
         | Specify p-> Ops.(+) p @@
           Line.extended_angle
-            ~angle:(angle_t-. (pi*.0.5)) (width*. 0.6)
+            ~radian:(angle_t-. (pi*.0.5)) (width*. 0.6)
       in
       (ctrl1, ctrl2)
     in
@@ -653,7 +651,7 @@ module To_path(Width : sig val width : float end) = struct
       let length_specified= Point.distance ~from:start end_ in
       if length_specified > length_limit  then
         invalid_arg "this extended dot is not short enough"
-        (* length_limit, Ops.(+) start (Line.extended_vec ~vec:vec_d length_limit) *)
+        (* length_limit, Ops.(+) start (Line.extended_vec vec_d length_limit) *)
       else
         (length_specified, end_)
     in
@@ -661,17 +659,17 @@ module To_path(Width : sig val width : float end) = struct
     let vec_d_anti45= Matrix.(apply (anticlock ~radian:(pi /. 4.)) vec_d) in
     let vec_d_anti45_neg= neg vec_d_anti45 in
     let p0= start in
-    let p1= Ops.(start + Line.extended_vec ~vec:vec_d_anti90 (max 1. (width/.8.))) in
+    let p1= Ops.(start + Line.extended_vec vec_d_anti90 (max 1. (width/.8.))) in
     let r_ctrl1=
-      let p= Ops.(p1 + Line.extended_vec ~vec:vec_d (length*.0.9)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (width*.1.5)) in
+      let p= Ops.(p1 + Line.extended_vec vec_d (length*.0.9)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (width*.1.5)) in
     let r_ctrl2=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45 (width*.0.6)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45 (width*.0.6)) in
     let l_ctrl1=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45_neg (width*.0.2)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45_neg (width*.0.2)) in
     let l_ctrl2=
-      let p= Ops.(p0 + Line.extended_vec ~vec:vec_d (length*.0.75)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (length*.0.08)) in
+      let p= Ops.(p0 + Line.extended_vec vec_d (length*.0.75)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (length*.0.08)) in
     let segments= [
       Line p1;
       Ccurve { ctrl1= r_ctrl1; ctrl2= r_ctrl2; end'= end_ };
@@ -709,7 +707,7 @@ module To_path(Width : sig val width : float end) = struct
       let length_specified= Point.distance ~from:start end_ in
       if length_specified < length_limit then
         invalid_arg "this extended dot is not long enough"
-        (* length_limit, Ops.(+) start (Line.extended_vec ~vec:vec_d length_limit) *)
+        (* length_limit, Ops.(+) start (Line.extended_vec vec_d length_limit) *)
       else
         (length_specified, end_)
     in
@@ -717,17 +715,17 @@ module To_path(Width : sig val width : float end) = struct
     let vec_d_anti45= Matrix.(apply (anticlock ~radian:(pi /. 4.)) vec_d) in
     let vec_d_anti45_neg= neg vec_d_anti45 in
     let p0= start in
-    let p1= Ops.(start + Line.extended_vec ~vec:vec_d_anti90 (max 1. (width/.8.))) in
+    let p1= Ops.(start + Line.extended_vec vec_d_anti90 (max 1. (width/.8.))) in
     let r_ctrl1=
-      let p= Ops.(p1 + Line.extended_vec ~vec:vec_d (length*.0.9)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (width*.1.5)) in
+      let p= Ops.(p1 + Line.extended_vec vec_d (length*.0.9)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (width*.1.5)) in
     let r_ctrl2=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45 (width*.0.6)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45 (width*.0.6)) in
     let l_ctrl1=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45_neg (width*.0.2)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45_neg (width*.0.2)) in
     let l_ctrl2=
-      let p= Ops.(p0 + Line.extended_vec ~vec:vec_d (length*.0.75)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (length*.0.08)) in
+      let p= Ops.(p0 + Line.extended_vec vec_d (length*.0.75)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (length*.0.08)) in
     let segments= [
       Line p1;
       Ccurve { ctrl1= r_ctrl1; ctrl2= r_ctrl2; end'= end_ };
@@ -765,17 +763,17 @@ module To_path(Width : sig val width : float end) = struct
     let vec_d_anti45= Matrix.(apply (anticlock ~radian:(pi /. 4.)) vec_d) in
     let vec_d_anti45_neg= neg vec_d_anti45 in
     let p0= start in
-    let p1= Ops.(start + Line.extended_vec ~vec:vec_d_anti90 (max 1. (width/.8.))) in
+    let p1= Ops.(start + Line.extended_vec vec_d_anti90 (max 1. (width/.8.))) in
     let r_ctrl1=
-      let p= Ops.(p1 + Line.extended_vec ~vec:vec_d (length*.0.9)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (width*.1.5)) in
+      let p= Ops.(p1 + Line.extended_vec vec_d (length*.0.9)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (width*.1.5)) in
     let r_ctrl2=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45 (width*.0.6)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45 (width*.0.6)) in
     let l_ctrl1=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45_neg (width*.0.2)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45_neg (width*.0.2)) in
     let l_ctrl2=
-      let p= Ops.(p0 + Line.extended_vec ~vec:vec_d (length*.0.75)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (length*.0.1)) in
+      let p= Ops.(p0 + Line.extended_vec vec_d (length*.0.75)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (length*.0.1)) in
     let segments= [
       Line p1;
       Ccurve { ctrl1= r_ctrl1; ctrl2= r_ctrl2; end'= end_ };
@@ -841,37 +839,37 @@ module To_path(Width : sig val width : float end) = struct
     let vec_p_anti90= Matrix.(apply anticlock_90 vec_p) in
     let vec_p_clock90= Matrix.(apply clockwise_90 vec_p) in
     let p0= start in
-    let p1= Ops.(p0 + Line.extended_vec ~vec:vec_p_anti90 (width/.8.)) in
+    let p1= Ops.(p0 + Line.extended_vec vec_p_anti90 (width/.8.)) in
     let ctrl1= get_adjust p.ctrl1
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.25)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 1.2)
+      + Line.extended_vec vec_p (length *. 0.25)
+      + Line.extended_vec vec_p_clock90 (width *. 1.2)
       )) in
     let ctrl2= get_adjust p.ctrl2
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.7)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 1.2)
+      + Line.extended_vec vec_p (length *. 0.7)
+      + Line.extended_vec vec_p_clock90 (width *. 1.2)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let p2= Ops.(+) end' @@
       Line.extended_vec
-        ~vec:(Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
+        (Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
         (width*.1.2) in
     let c2=
       let vec_end_p2= Ops.(p2 - end') in
       let length= distance vec_end_p2 in
-      let p= Ops.(end' + Line.extended_vec ~vec:vec_end_p2 (length*.0.4)) in
+      let p= Ops.(end' + Line.extended_vec vec_end_p2 (length*.0.4)) in
       Ops.(p +
         Line.extended_vec
-          ~vec:Matrix.(apply anticlock_90 vec_end_p2)
+          Matrix.(apply anticlock_90 vec_end_p2)
           (width*.0.3))
     in
     let l_ctrl2=
-      Ops.(ctrl1 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.6))
+      Ops.(ctrl1 + Line.extended_vec vec_p_clock90 (width *. 0.6))
     in
     let l_ctrl1=
-      Ops.(ctrl2 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.8))
+      Ops.(ctrl2 + Line.extended_vec vec_p_clock90 (width *. 0.8))
     in
     let segments= [
       Line p1;
@@ -913,46 +911,46 @@ module To_path(Width : sig val width : float end) = struct
     let vec_u= Ops.(p_start - start) in
     let vec_u_anti90= Matrix.(apply anticlock_90 vec_u) in
     let vec_u_clock90= Matrix.(apply clockwise_90 vec_u) in
-    let u0= Ops.(start + Line.extended_vec ~vec:vec_u_anti90 (width*.0.3))
-    and u1= Ops.(start + Line.extended_vec ~vec:vec_u_clock90 (width*.0.3)) in
-    let p1= Ops.(p_start + Line.extended_vec ~vec:vec_p_anti90 (width/.8.)) in
+    let u0= Ops.(start + Line.extended_vec vec_u_anti90 (width*.0.3))
+    and u1= Ops.(start + Line.extended_vec vec_u_clock90 (width*.0.3)) in
+    let p1= Ops.(p_start + Line.extended_vec vec_p_anti90 (width/.8.)) in
     let ctrl1= get_adjust up.ctrl1
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.25)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.50)
+      + Line.extended_vec vec_p (length *. 0.25)
+      + Line.extended_vec vec_p_clock90 (width *. 0.50)
       )) in
     let ctrl2= get_adjust up.ctrl2
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.7)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.55)
+      + Line.extended_vec vec_p (length *. 0.7)
+      + Line.extended_vec vec_p_clock90 (width *. 0.55)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let p2= Ops.(+) end' @@
       Line.extended_vec
-        ~vec:(Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
+        (Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
         (width*.1.2) in
     let c2=
       let vec_end_p2= Ops.(p2 - end') in
       let length= distance vec_end_p2 in
-      let p= Ops.(end' + Line.extended_vec ~vec:vec_end_p2 (length*.0.4)) in
+      let p= Ops.(end' + Line.extended_vec vec_end_p2 (length*.0.4)) in
       Ops.(p +
         Line.extended_vec
-          ~vec:Matrix.(apply anticlock_90 vec_end_p2)
+          Matrix.(apply anticlock_90 vec_end_p2)
           (width*.0.3))
     in
     let l_ctrl2=
-      Ops.(ctrl1 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.2))
+      Ops.(ctrl1 + Line.extended_vec vec_p_clock90 (width *. 0.2))
     in
     let l_ctrl1=
-      Ops.(ctrl2 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.45))
+      Ops.(ctrl2 + Line.extended_vec vec_p_clock90 (width *. 0.45))
     in
     let vec_u_rev= Ops.(start - p_start) in
     let vec_p_inital= Ops.(l_ctrl2 - p1) in
     let vec_u_p_mean= Line.([vec_u_rev; vec_p_inital]
       |> List.map unit_vector
       |> vector_mean) in
-    let p4= Ops.(p1 + Line.extended_vec ~vec:vec_u_p_mean (width *. 0.25)) in
+    let p4= Ops.(p1 + Line.extended_vec vec_u_p_mean (width *. 0.25)) in
     let segments= [
       Line p1;
       Ccurve {ctrl1= r_ctrl1; ctrl2= r_ctrl2; end'= p2};
@@ -1018,34 +1016,34 @@ module To_path(Width : sig val width : float end) = struct
     let p1= { p_start with x= p_start.x +. width *. _h } in
     let ctrl1= get_adjust hp.ctrl1
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (p_length *. 0.25)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.50)
+      + Line.extended_vec vec_p (p_length *. 0.25)
+      + Line.extended_vec vec_p_clock90 (width *. 0.50)
       )) in
     let ctrl2= get_adjust hp.ctrl2
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (p_length *. 0.7)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.75)
+      + Line.extended_vec vec_p (p_length *. 0.7)
+      + Line.extended_vec vec_p_clock90 (width *. 0.75)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let p2= Ops.(+) end' @@
       Line.extended_vec
-        ~vec:(Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
+        (Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
         (width*.1.8) in
     let c2=
       let vec_end_p2= Ops.(p2 - end') in
       let length= distance vec_end_p2 in
-      let p= Ops.(end' + Line.extended_vec ~vec:vec_end_p2 (length*.0.4)) in
+      let p= Ops.(end' + Line.extended_vec vec_end_p2 (length*.0.4)) in
       Ops.(p +
         Line.extended_vec
-          ~vec:Matrix.(apply anticlock_90 vec_end_p2)
+          Matrix.(apply anticlock_90 vec_end_p2)
           (width*.0.3))
     in
     let l_ctrl2= let open Ops in
-      ctrl1 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.2)
+      ctrl1 + Line.extended_vec vec_p_clock90 (width *. 0.2)
     in
     let l_ctrl1= let open Ops in
-      ctrl2 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.25)
+      ctrl2 + Line.extended_vec vec_p_clock90 (width *. 0.25)
     in
 
     let segments= [
@@ -1090,37 +1088,37 @@ module To_path(Width : sig val width : float end) = struct
     let vec_p_anti90= Matrix.(apply anticlock_90 vec_p) in
     let vec_p_clock90= Matrix.(apply clockwise_90 vec_p) in
     let p0= start in
-    let p1= Ops.(p0 + Line.extended_vec ~vec:vec_p_anti90 (width/.8.)) in
+    let p1= Ops.(p0 + Line.extended_vec vec_p_anti90 (width/.8.)) in
     let ctrl1= get_adjust fp.ctrl1
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.25)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 1.75)
+      + Line.extended_vec vec_p (length *. 0.25)
+      + Line.extended_vec vec_p_clock90 (width *. 1.75)
       )) in
     let ctrl2= get_adjust fp.ctrl2
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.7)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.25)
+      + Line.extended_vec vec_p (length *. 0.7)
+      + Line.extended_vec vec_p_clock90 (width *. 0.25)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let p2= Ops.(+) end' @@
       Line.extended_vec
-        ~vec:(Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
+        (Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
         (width*.1.3) in
     let c2=
       let vec_end_p2= Ops.(p2 - end') in
       let length= distance vec_end_p2 in
-      let p= Ops.(end' + Line.extended_vec ~vec:vec_end_p2 (length*.0.4)) in
+      let p= Ops.(end' + Line.extended_vec vec_end_p2 (length*.0.4)) in
       Ops.(p +
         Line.extended_vec
-          ~vec:Matrix.(apply anticlock_90 vec_end_p2)
+          Matrix.(apply anticlock_90 vec_end_p2)
           (width*.0.3))
     in
     let l_ctrl2=
-      Ops.(ctrl1 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.45))
+      Ops.(ctrl1 + Line.extended_vec vec_p_clock90 (width *. 0.45))
     in
     let l_ctrl1=
-      Ops.(ctrl2 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.55))
+      Ops.(ctrl2 + Line.extended_vec vec_p_clock90 (width *. 0.55))
     in
     let segments= [
       Line p1;
@@ -1162,46 +1160,46 @@ module To_path(Width : sig val width : float end) = struct
     let vec_u= Ops.(p_start - start) in
     let vec_u_anti90= Matrix.(apply anticlock_90 vec_u) in
     let vec_u_clock90= Matrix.(apply clockwise_90 vec_u) in
-    let u0= Ops.(start + Line.extended_vec ~vec:vec_u_anti90 (width*.0.3))
-    and u1= Ops.(start + Line.extended_vec ~vec:vec_u_clock90 (width*.0.3)) in
-    let p1= Ops.(p_start + Line.extended_vec ~vec:vec_p_anti90 (width/.8.)) in
+    let u0= Ops.(start + Line.extended_vec vec_u_anti90 (width*.0.3))
+    and u1= Ops.(start + Line.extended_vec vec_u_clock90 (width*.0.3)) in
+    let p1= Ops.(p_start + Line.extended_vec vec_p_anti90 (width/.8.)) in
     let ctrl1= get_adjust ufp.ctrl1
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.25)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 1.75)
+      + Line.extended_vec vec_p (length *. 0.25)
+      + Line.extended_vec vec_p_clock90 (width *. 1.75)
       )) in
     let ctrl2= get_adjust ufp.ctrl1
       ~f:(fun()-> Ops.(p1
-      + Line.extended_vec ~vec:vec_p (length *. 0.7)
-      + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.25)
+      + Line.extended_vec vec_p (length *. 0.7)
+      + Line.extended_vec vec_p_clock90 (width *. 0.25)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let p2= Ops.(+) end' @@
       Line.extended_vec
-        ~vec:(Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
+        (Matrix.(apply (anticlock ~radian:(pi *. 0.45)) vec_p))
         (width*.1.3) in
     let c2=
       let vec_end_p2= Ops.(p2 - end') in
       let length= distance vec_end_p2 in
-      let p= Ops.(end' + Line.extended_vec ~vec:vec_end_p2 (length*.0.4)) in
+      let p= Ops.(end' + Line.extended_vec vec_end_p2 (length*.0.4)) in
       Ops.(p +
         Line.extended_vec
-          ~vec:Matrix.(apply anticlock_90 vec_end_p2)
+          Matrix.(apply anticlock_90 vec_end_p2)
           (width*.0.3))
     in
     let l_ctrl2=
-      Ops.(ctrl1 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.45))
+      Ops.(ctrl1 + Line.extended_vec vec_p_clock90 (width *. 0.45))
     in
     let l_ctrl1=
-      Ops.(ctrl2 + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.55))
+      Ops.(ctrl2 + Line.extended_vec vec_p_clock90 (width *. 0.55))
     in
     let vec_u_rev= Ops.(start - p_start) in
     let vec_p_inital= Ops.(l_ctrl2 - p1) in
     let vec_u_p_mean= Line.([vec_u_rev; vec_p_inital]
       |> List.map unit_vector
       |> vector_mean) in
-    let p4= Ops.(p1 + Line.extended_vec ~vec:vec_u_p_mean (width *. 0.25)) in
+    let p4= Ops.(p1 + Line.extended_vec vec_u_p_mean (width *. 0.25)) in
     let segments= [
       Line p1;
       Ccurve {ctrl1= r_ctrl1; ctrl2= r_ctrl2; end'= p2};
@@ -1235,7 +1233,7 @@ module To_path(Width : sig val width : float end) = struct
     let r= length /. 2. in
     let ctrl1, ctrl2=
       let ctrl_vec=
-        Line.extended_vec ~vec:vec_anti90
+        Line.extended_vec vec_anti90
           (circle_ctrl_distance ~seg:2 r) in
       let ctrl1= get_adjust c.ctrl1 ~f:(fun ()->
         Ops.(start + ctrl_vec)) in
@@ -1250,19 +1248,19 @@ module To_path(Width : sig val width : float end) = struct
       let arc= Ops.(start - ctrl1) in
       Matrix.(apply anticlock_90 arc) in
     let arc_right=
-      let ctrl1= Ops.(ctrl1 + Line.extended_vec ~vec:vec_anti90 (width*.0.5))
-      and ctrl2= Ops.(ctrl2 + Line.extended_vec ~vec:vec_anti90 (width*.0.5)) in
+      let ctrl1= Ops.(ctrl1 + Line.extended_vec vec_anti90 (width*.0.5))
+      and ctrl2= Ops.(ctrl2 + Line.extended_vec vec_anti90 (width*.0.5)) in
       Ccurve {ctrl1;ctrl2;end'} in
     let line_down=
       let p= Ops.(+) end' @@
-        Line.extended_vec ~vec:vec_down_end (width *. 0.5) in
+        Line.extended_vec vec_down_end (width *. 0.5) in
       Line p in
     let arc_left=
       let end'= Ops.(+) start @@
-        Line.extended_vec ~vec:vec_up_end (width *. 0.5)
+        Line.extended_vec vec_up_end (width *. 0.5)
       in
-      let ctrl1= Ops.(ctrl2 - Line.extended_vec ~vec:vec_anti90 (width*.0.5))
-      and ctrl2= Ops.(ctrl1 - Line.extended_vec ~vec:vec_anti90 (width*.0.5)) in
+      let ctrl1= Ops.(ctrl2 - Line.extended_vec vec_anti90 (width*.0.5))
+      and ctrl2= Ops.(ctrl1 - Line.extended_vec vec_anti90 (width*.0.5)) in
       Ccurve {ctrl1;ctrl2;end'} in
     let line_up= Line start in
     let segments= [arc_right; line_down; arc_left; line_up] in
@@ -1293,7 +1291,7 @@ module To_path(Width : sig val width : float end) = struct
     let r= length /. 2. in
     let ctrl1, ctrl2=
       let ctrl_vec=
-        Line.extended_vec ~vec:vec_clock90
+        Line.extended_vec vec_clock90
           (circle_ctrl_distance ~seg:2 r) in
       let ctrl1= get_adjust a.ctrl1 ~f:(fun ()->
         Ops.(start + ctrl_vec)) in
@@ -1308,19 +1306,19 @@ module To_path(Width : sig val width : float end) = struct
       let arc= Ops.(start - ctrl1) in
       Matrix.(apply clockwise_90 arc) in
     let arc_left=
-      let ctrl1= Ops.(ctrl1 - Line.extended_vec ~vec:vec_clock90 (width*.0.5))
-      and ctrl2= Ops.(ctrl2 - Line.extended_vec ~vec:vec_clock90 (width*.0.5)) in
+      let ctrl1= Ops.(ctrl1 - Line.extended_vec vec_clock90 (width*.0.5))
+      and ctrl2= Ops.(ctrl2 - Line.extended_vec vec_clock90 (width*.0.5)) in
       Ccurve {ctrl1;ctrl2;end'} in
     let line_down=
       let p= Ops.(+) end' @@
-        Line.extended_vec ~vec:vec_down_end (width *. 0.5) in
+        Line.extended_vec vec_down_end (width *. 0.5) in
       Line p in
     let arc_right=
       let end'= Ops.(+) start @@
-        Line.extended_vec ~vec:vec_up_end (width *. 0.5)
+        Line.extended_vec vec_up_end (width *. 0.5)
       in
-      let ctrl1= Ops.(ctrl2 + Line.extended_vec ~vec:vec_clock90 (width*.0.5))
-      and ctrl2= Ops.(ctrl1 + Line.extended_vec ~vec:vec_clock90 (width*.0.5)) in
+      let ctrl1= Ops.(ctrl2 + Line.extended_vec vec_clock90 (width*.0.5))
+      and ctrl2= Ops.(ctrl1 + Line.extended_vec vec_clock90 (width*.0.5)) in
       Ccurve {ctrl1;ctrl2;end'} in
     let line_up= Line start in
     let segments= [arc_left; line_down; arc_right; line_up] in
@@ -1358,10 +1356,10 @@ module To_path(Width : sig val width : float end) = struct
     in
     let vec_clock90= Matrix.(apply clockwise_90 vec_o)
     and vec_anti90= Matrix.(apply anticlock_90 vec_o) in
-    let vec_right= Line.extended_vec ~vec:vec_anti90 (o.width/.2.)
-    and vec_left= Line.extended_vec ~vec:vec_clock90 (o.width/.2.)
-    and vec_down= Line.extended_vec ~vec:vec_o (length/.2.)
-    and vec_up= Line.extended_vec ~vec:vec_o_rev (length/.2.) in
+    let vec_right= Line.extended_vec vec_anti90 (o.width/.2.)
+    and vec_left= Line.extended_vec vec_clock90 (o.width/.2.)
+    and vec_down= Line.extended_vec vec_o (length/.2.)
+    and vec_up= Line.extended_vec vec_o_rev (length/.2.) in
     let left, right=
       let middle= Ops.((start + end') /< 2.) in
       Ops.(middle + vec_left, middle + vec_right)
@@ -1483,8 +1481,8 @@ module To_path(Width : sig val width : float end) = struct
     let vec_p_clock90= Matrix.(apply clockwise_90 vec_p) in
     let p1= { j_start with x= j_start.x +. width*.1.1 } in
     let r_ctrl=
-      let p= Ops.(p1 + Line.extended_vec ~vec:vec_p (j_length *. 0.5)) in
-      Ops.(p + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.4))
+      let p= Ops.(p1 + Line.extended_vec vec_p (j_length *. 0.5)) in
+      Ops.(p + Line.extended_vec vec_p_clock90 (width *. 0.4))
     in
     let segments= [
       Line h1;
@@ -1564,8 +1562,8 @@ module To_path(Width : sig val width : float end) = struct
     let vec_p= Ops.(end' - j_start) in
     let vec_p_clock90= Matrix.(apply clockwise_90 vec_p) in
     let r_ctrl=
-      let p= Ops.(p1 + Line.extended_vec ~vec:vec_p (j_length *. 0.5)) in
-      Ops.(p + Line.extended_vec ~vec:vec_p_clock90 (width *. 0.4))
+      let p= Ops.(p1 + Line.extended_vec vec_p (j_length *. 0.5)) in
+      Ops.(p + Line.extended_vec vec_p_clock90 (width *. 0.4))
     in
     let segments= [
       Line h1;
@@ -1621,21 +1619,21 @@ module To_path(Width : sig val width : float end) = struct
     let t_length= Point.distance vec_t in
     let vec_t_clock90= Matrix.(apply clockwise_90 vec_t) in
     let vec_t_anti90= Matrix.(apply anticlock_90 vec_t) in
-    let end_post= Ops.(end' + Line.extended_vec ~vec:vec_t_clock90 (width *.0.3)) in
+    let end_post= Ops.(end' + Line.extended_vec vec_t_clock90 (width *.0.3)) in
     let ctrl1= get_adjust ht.ctrl1
       ~f:(fun()-> Ops.(h_right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.3)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 1.0)
+      + Line.extended_vec vec_t (t_length *. 0.3)
+      + Line.extended_vec vec_t_anti90 (width *. 1.0)
       )) in
     let ctrl2= get_adjust ht.ctrl2
       ~f:(fun()-> Ops.(h_right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.7)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.9)
+      + Line.extended_vec vec_t (t_length *. 0.7)
+      + Line.extended_vec vec_t_anti90 (width *. 0.9)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
-    let l_ctrl2= Ops.(ctrl1 - Line.extended_vec ~vec:vec_t_anti90 (width *. 0.9)) in
-    let l_ctrl1= Ops.(ctrl2 - Line.extended_vec ~vec:vec_t_anti90 (width *. 0.7)) in
+    let l_ctrl2= Ops.(ctrl1 - Line.extended_vec vec_t_anti90 (width *. 0.9)) in
+    let l_ctrl1= Ops.(ctrl2 - Line.extended_vec vec_t_anti90 (width *. 0.7)) in
 
     let projection=
       let vec= Ops.(r_ctrl1 - h_right) in
@@ -1726,7 +1724,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_p= Ops.(end' - v_start) in
     let vec_p_clock90= Matrix.(apply clockwise_90 vec_p) in
     let t1= { v_start with x= v_start.x +. width*.1.2 } in
-    let t2= Ops.(end' + Line.extended_vec ~vec:vec_p_clock90 (width *.0.8)) in
+    let t2= Ops.(end' + Line.extended_vec vec_p_clock90 (width *.0.8)) in
     let segments= [
       Line h1;
       Line h2;
@@ -1866,17 +1864,17 @@ module To_path(Width : sig val width : float end) = struct
     let c_j_end= {x= j_down.x; y= j_down.y-. width*.0.8} in
     let vec_j= Ops.(j_end - j_start) in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= let open Ops in
       let p_toward= { x= j_start.x; y= v_end.y -. width *. 1. } in
       p_toward - j_end in
     let j_v_left= {x= j_start.x -. width; y= j_start.y} in
     let pre_j_v_left= let open Ops in
-      let line1= Line.of_points j_end (j_end + Line.extended_vec ~vec:vec_j_up 1.)
+      let line1= Line.of_points j_end (j_end + Line.extended_vec vec_j_up 1.)
       and line2= Line.of_points v_top_left j_v_left in
       let x= Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
-      x - Line.extended_vec ~vec:vec_j_up (width*.0.5)
+      x - Line.extended_vec vec_j_up (width*.0.5)
     in
     let c_j_v_left=
       let line1= Line.of_points v_top_left j_v_left
@@ -1955,13 +1953,13 @@ module To_path(Width : sig val width : float end) = struct
     let t_top_right= { t_top_left with x= t_top_left.x +. width*.1. } in
     let ctrl1= get_adjust htj.ctrl1
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.5)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 1.5)
+      + Line.extended_vec vec_t (t_length *. 0.5)
+      + Line.extended_vec vec_t_anti90 (width *. 1.5)
       )) in
     let ctrl2= get_adjust htj.ctrl2
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.9)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.8)
+      + Line.extended_vec vec_t (t_length *. 0.9)
+      + Line.extended_vec vec_t_anti90 (width *. 0.8)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
@@ -1974,7 +1972,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= let open Ops in
       let p_toward= { x= t_top_right.x; y= t_end.y -. width *. 1. } in
@@ -1985,10 +1983,10 @@ module To_path(Width : sig val width : float end) = struct
       let after= Bezier.lerp3 t_top_right r_ctrl1 r_ctrl2 t_end 0.7001 in
       let vec_t_0d8= Ops.(after - before) in
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
     in
     let pre_j_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length -. width*.1.5)
+      j_end + Line.extended_vec vec_j_up (j_length -. width*.1.5)
     in
     let c_j_t_left=
       let line1= Line.of_points l_t_ctrl j_t_left
@@ -2081,13 +2079,13 @@ module To_path(Width : sig val width : float end) = struct
     let t_length= distance vec_t in
     let ctrl1= get_adjust utj.ctrl1
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.5)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 1.5)
+      + Line.extended_vec vec_t (t_length *. 0.5)
+      + Line.extended_vec vec_t_anti90 (width *. 1.5)
       )) in
     let ctrl2= get_adjust utj.ctrl2
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.9)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.8)
+      + Line.extended_vec vec_t (t_length *. 0.9)
+      + Line.extended_vec vec_t_anti90 (width *. 0.8)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
@@ -2100,7 +2098,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= let open Ops in
       let p_toward= { x= t_top_right.x; y= t_end.y -. width *. 1. } in
@@ -2111,10 +2109,10 @@ module To_path(Width : sig val width : float end) = struct
       let after= Bezier.lerp3 t_top_right r_ctrl1 r_ctrl2 t_end 0.7001 in
       let vec_t_0d8= Ops.(after - before) in
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
     in
     let pre_j_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length -. width*.1.5)
+      j_end + Line.extended_vec vec_j_up (j_length -. width*.1.5)
     in
     let c_j_t_left=
       let line1= Line.of_points l_t_ctrl j_t_left
@@ -2290,10 +2288,10 @@ module To_path(Width : sig val width : float end) = struct
       let r_u= if r_u > pi then pi *. 2. -. r_u  else r_u in
       let adjust= Float.pow (r_u /. (pi/.2.)*.1.2) 2. in
       { down with y= down.y -. width *. (1.2+.adjust) } in
-    let post_end= Ops.(end' + Line.extended_vec ~vec:vec_u_clock90 (width*.0.2)) in
+    let post_end= Ops.(end' + Line.extended_vec vec_u_clock90 (width*.0.2)) in
     let c_u_down=
       let p= Ops.(down *< 0.7 + end' *< 0.3) in
-      Ops.(p - Line.extended_vec ~vec:vec_u_clock90 (width*.0.1)) in
+      Ops.(p - Line.extended_vec vec_u_clock90 (width*.0.1)) in
     let u_left= {
       x= down.x -. width *. 1.2;
       y= down.y -. width *. 1.4;
@@ -2405,10 +2403,10 @@ module To_path(Width : sig val width : float end) = struct
       and line2= Line.of_points h2_down_left h2_down_c in
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let end_up_c= Ops.(h2_up_right +
-      Line.extended_vec ~vec:(h2_up_right - h2_up_c) (width *. 0.4)
+      Line.extended_vec (h2_up_right - h2_up_c) (width *. 0.4)
       )
     and end_down_c= Ops.(h2_down_right +
-      Line.extended_vec ~vec:(h2_down_right - h2_down_c) (width *. 1.2)
+      Line.extended_vec (h2_down_right - h2_down_c) (width *. 1.2)
       ) in
     let segments= [
       Line h1;
@@ -2467,7 +2465,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j_clock90= Matrix.(apply clockwise_90 vec_j) in
     let j_length= distance vec_j in
     let end_post= Ops.(end' +
-      Line.extended_vec ~vec:vec_j_clock90 (width*.0.2)) in
+      Line.extended_vec vec_j_clock90 (width*.0.2)) in
     let radius= get_adjust haj.a_radius ~f:(fun()-> width) in
     let h0= start in
     let h1= {right with x= right.x -. width} in
@@ -2517,9 +2515,9 @@ module To_path(Width : sig val width : float end) = struct
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let vec_h2_up_right= Ops.(h2_up_right - h2_up_c) in
     let h2_j_c1= Ops.( h2_up_right+
-      Line.extended_vec ~vec:vec_h2_up_right (j_length*.0.25)) in
+      Line.extended_vec vec_h2_up_right (j_length*.0.25)) in
     let h2_j_c2= Ops.(end' -
-      Line.extended_vec ~vec:vec_j (j_length*.0.133)) in
+      Line.extended_vec vec_j (j_length*.0.133)) in
     let j_h2_right_c= {
       x= end_post.x*.0.95+.j_right.x*.0.05;
       y= j_right.y+.width*.0.1} in
@@ -2528,7 +2526,7 @@ module To_path(Width : sig val width : float end) = struct
       and line2= Line.of_points h2_down_left h2_down_c in
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let end_down_c= Ops.(h2_down_right +
-      Line.extended_vec ~vec:(h2_down_right - h2_down_c) (width *. 1.6)
+      Line.extended_vec (h2_down_right - h2_down_c) (width *. 1.6)
       ) in
     let segments= [
       Line h1;
@@ -2643,17 +2641,17 @@ module To_path(Width : sig val width : float end) = struct
       let open Ops in
       let vec= Matrix.(apply clockwise_90 vec_end_p2) in
       let base= post_end *< 0.05 + p2 *< 0.95 in
-      base + Line.extended_vec ~vec (width*.0.6)
+      base + Line.extended_vec vec (width*.0.6)
     in
     let l_ctrl1= Ops.(ctrl2 +
-      Line.extended_vec ~vec:vec_p_clock90 (width *. 1.50)) in
+      Line.extended_vec vec_p_clock90 (width *. 1.50)) in
     let l_ctrl2= Ops.(ctrl1 +
-      Line.extended_vec ~vec:vec_p_clock90 (width *. 1.0)) in
+      Line.extended_vec vec_p_clock90 (width *. 1.0)) in
     let lerp_p_down= Bezier.lerp3 p_start l_ctrl2 l_ctrl1 p_end in
     let p_end_post=lerp_p_down 0.9 in
     let c2= let open Ops in
       let vec= p_end_post - l_ctrl1 in
-      p_end_post + Line.extended_vec ~vec width
+      p_end_post + Line.extended_vec vec width
     in
     let segments= [
       Line h1;
@@ -2715,23 +2713,23 @@ module To_path(Width : sig val width : float end) = struct
     let vec_h2= Ops.(htaj.a_end - h2_start) in
     let vec_h2_anti90= Matrix.(apply anticlock_90 vec_h2) in
     let a_center= Ops.(h2_start +
-      Line.extended_vec ~vec:vec_h2_anti90 a_radius) in
+      Line.extended_vec vec_h2_anti90 a_radius) in
     let vec_center_start= Ops.(h1_end - a_center) in
     let t_end=
       let vec= Matrix.(apply anticlock_90 vec_center_start) in
-      Ops.(a_center + Line.extended_vec ~vec a_radius)
+      Ops.(a_center + Line.extended_vec vec a_radius)
     in
     let vec_t= Ops.(t_end - h1_end) in
     let t_length= distance vec_t in
     let t_c= Ops.(
       (t_end+h1_end) /< 2. +
       Line.extended_vec
-        ~vec:Matrix.(apply clockwise_90 vec_t)
+        Matrix.(apply clockwise_90 vec_t)
         (t_length*.0.05)) in
     let h2_c= Ops.(
       (h2_start+h2_end) /< 2. +
       Line.extended_vec
-        ~vec:Matrix.(apply clockwise_90 vec_h2)
+        Matrix.(apply clockwise_90 vec_h2)
         (h2_length*.0.05)) in
     let a_c=
       let line1= Line.of_points t_c t_end
@@ -2771,17 +2769,17 @@ module To_path(Width : sig val width : float end) = struct
     let r_a_c= a_c in
     let up_h2_c= h2_c in
     let l_t_c= Ops.(t_c +
-      Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t) width) in
+      Line.extended_vec Matrix.(apply clockwise_90 vec_t) width) in
     let l_a_c= Ops.(a_c +
-      Line.extended_vec ~vec:(a_c - a_center) (width*.1.5)) in
+      Line.extended_vec (a_c - a_center) (width*.1.5)) in
     let down_h2_c= {h2_c with y= h2_c.y+.width} in
 
     let h2_start_down= let open Ops in
       let vec= Matrix.(apply clockwise_90 (up_h2_c - h2_start)) in
-      h2_start + Line.extended_vec ~vec (width) in
+      h2_start + Line.extended_vec vec (width) in
     let t_end_l= let open Ops in
       let vec= Matrix.(apply clockwise_90 (t_end - r_t_c)) in
-      Ops.(t_end + Line.extended_vec ~vec width) in
+      Ops.(t_end + Line.extended_vec vec width) in
 
     let j_start= {h2_end with x= h2_end.x -. width*.1.2} in
     let j_right= {x= h2_end.x; y= j_start.y -. width *. 0.1 } in
@@ -2790,21 +2788,21 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j_clock90= Matrix.(apply clockwise_90 vec_j) in
     let j_length= distance vec_j in
     let end_post= Ops.(end' +
-      Line.extended_vec ~vec:vec_j_clock90 (width*.0.2)) in
+      Line.extended_vec vec_j_clock90 (width*.0.2)) in
 
     let h2_up_right=
       { x= j_start.x -. width*.0.8; y= j_start.y } in
 
     let vec_h2_up_right= Ops.(h2_up_right - up_h2_c) in
     let h2_j_c1= Ops.( h2_up_right+
-      Line.extended_vec ~vec:vec_h2_up_right (j_length*.0.25)) in
+      Line.extended_vec vec_h2_up_right (j_length*.0.25)) in
     let h2_j_c2= Ops.(end' -
-      Line.extended_vec ~vec:vec_j (j_length*.0.133)) in
+      Line.extended_vec vec_j (j_length*.0.133)) in
     let j_h2_right_c= {
       x= end_post.x*.0.95+.j_right.x*.0.05;
       y= j_right.y+.width*.0.1} in
     let end_down_c= Ops.(a_end_post +
-      Line.extended_vec ~vec:(a_end_post - down_h2_c) (width *. 1.6)
+      Line.extended_vec (a_end_post - down_h2_c) (width *. 1.6)
       ) in
     let segments= [
       Line h1;
@@ -2885,18 +2883,18 @@ module To_path(Width : sig val width : float end) = struct
     let vec_t_anti90= Matrix.(apply anticlock_90 vec_t) in
     let t_ctrl1= get_adjust htc.t_ctrl1
       ~f:(fun()-> Ops.(t1
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.3)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.5)
+      + Line.extended_vec vec_t (t_length *. 0.3)
+      + Line.extended_vec vec_t_anti90 (width *. 0.5)
       )) in
     let t_ctrl2= get_adjust htc.t_ctrl2
       ~f:(fun()-> Ops.(t1
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.7)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.6)
+      + Line.extended_vec vec_t (t_length *. 0.7)
+      + Line.extended_vec vec_t_anti90 (width *. 0.6)
       )) in
     let t_r_ctrl1= t_ctrl1 in
     let t_r_ctrl2= t_ctrl2 in
-    let t_l_ctrl2= Ops.(t_ctrl1 - Line.extended_vec ~vec:vec_t_anti90 (width *. 0.5)) in
-    let t_l_ctrl1= Ops.(t_ctrl2 - Line.extended_vec ~vec:vec_t_anti90 (width *. 0.4)) in
+    let t_l_ctrl2= Ops.(t_ctrl1 - Line.extended_vec vec_t_anti90 (width *. 0.5)) in
+    let t_l_ctrl1= Ops.(t_ctrl2 - Line.extended_vec vec_t_anti90 (width *. 0.4)) in
 
     let c_start= htc.t_end
     and end'= htc.end_ in
@@ -2907,10 +2905,10 @@ module To_path(Width : sig val width : float end) = struct
     let c_r= c_length /. 2. in
     let c_ctrl1, c_ctrl2=
       let ctrl_vec=
-        Line.extended_vec ~vec:c_vec_anti90
+        Line.extended_vec c_vec_anti90
           (circle_ctrl_distance_raw ~seg:2.3 c_r) in
       let ctrl_vec_80=
-        Line.extended_vec ~vec:c_vec_anti75
+        Line.extended_vec c_vec_anti75
           (circle_ctrl_distance_raw ~seg:2.1 c_r) in
       let ctrl1= get_adjust htc.c_ctrl1 ~f:(fun ()->
         Ops.(c_start + ctrl_vec_80)) in
@@ -2923,17 +2921,17 @@ module To_path(Width : sig val width : float end) = struct
       Matrix.(apply clockwise_90 arc)
     in
     let c_arc_right=
-      let ctrl1= Ops.(c_ctrl1 + Line.extended_vec ~vec:c_vec_anti90 (width*.0.5))
-      and ctrl2= Ops.(c_ctrl2 + Line.extended_vec ~vec:c_vec_anti90 (width*.0.5)) in
+      let ctrl1= Ops.(c_ctrl1 + Line.extended_vec c_vec_anti90 (width*.0.5))
+      and ctrl2= Ops.(c_ctrl2 + Line.extended_vec c_vec_anti90 (width*.0.5)) in
       Ccurve {ctrl1;ctrl2;end'} in
     let c_line_down=
       let p= Ops.(+) end' @@
-        Line.extended_vec ~vec:c_vec_down_end (width *. 0.2) in
+        Line.extended_vec c_vec_down_end (width *. 0.2) in
       Line p in
     let c_arc_left=
       let end'= { t_end with x= t_end.x -. width*.0.5 } in
-      let ctrl1= Ops.(c_ctrl2 - Line.extended_vec ~vec:c_vec_anti90 (width*.0.5))
-      and ctrl2= Ops.(c_ctrl1 - Line.extended_vec ~vec:c_vec_anti90 (width*.0.5)) in
+      let ctrl1= Ops.(c_ctrl2 - Line.extended_vec c_vec_anti90 (width*.0.5))
+      and ctrl2= Ops.(c_ctrl1 - Line.extended_vec c_vec_anti90 (width*.0.5)) in
       Ccurve {ctrl1;ctrl2;end'} in
 
     let segments= [
@@ -2997,18 +2995,18 @@ module To_path(Width : sig val width : float end) = struct
     let t1_vec_anti90= Matrix.(apply anticlock_90 t1_vec) in
     let t1_ctrl1= get_adjust htht.t1_ctrl1
       ~f:(fun()-> Ops.(ht1_right
-      + Line.extended_vec ~vec:t1_vec (t1_length *. 0.3)
-      + Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.6)
+      + Line.extended_vec t1_vec (t1_length *. 0.3)
+      + Line.extended_vec t1_vec_anti90 (width *. 0.6)
       )) in
     let t1_ctrl2= get_adjust htht.t1_ctrl2
       ~f:(fun()-> Ops.(ht1_right
-      + Line.extended_vec ~vec:t1_vec (t1_length *. 0.7)
-      + Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.9)
+      + Line.extended_vec t1_vec (t1_length *. 0.7)
+      + Line.extended_vec t1_vec_anti90 (width *. 0.9)
       )) in
     let t1_r_ctrl1= t1_ctrl1 in
     let t1_r_ctrl2= t1_ctrl1 in
-    let t1_l_ctrl2= Ops.(t1_ctrl1 - Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.8)) in
-    let t1_l_ctrl1= Ops.(t1_ctrl2 - Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.8)) in
+    let t1_l_ctrl2= Ops.(t1_ctrl1 - Line.extended_vec t1_vec_anti90 (width *. 0.8)) in
+    let t1_l_ctrl1= Ops.(t1_ctrl2 - Line.extended_vec t1_vec_anti90 (width *. 0.8)) in
 
     let ht1_projection=
       let vec= Ops.(t1_r_ctrl1 - ht1_right) in
@@ -3048,21 +3046,21 @@ module To_path(Width : sig val width : float end) = struct
     let t2_length= Point.distance t2_vec in
     let t2_vec_clock90= Matrix.(apply clockwise_90 t2_vec) in
     let t2_vec_anti90= Matrix.(apply anticlock_90 t2_vec) in
-    let t2_end_post= Ops.(ht2_end + Line.extended_vec ~vec:t2_vec_clock90 (width *.0.3)) in
+    let t2_end_post= Ops.(ht2_end + Line.extended_vec t2_vec_clock90 (width *.0.3)) in
     let t2_ctrl1= get_adjust htht.t1_ctrl1
       ~f:(fun()-> Ops.(ht2_right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.3)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 1.2)
+      + Line.extended_vec t2_vec (t2_length *. 0.3)
+      + Line.extended_vec t2_vec_anti90 (width *. 1.2)
       )) in
     let t2_ctrl2= get_adjust htht.t1_ctrl2
       ~f:(fun()-> Ops.(ht2_right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.7)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 0.9)
+      + Line.extended_vec t2_vec (t2_length *. 0.7)
+      + Line.extended_vec t2_vec_anti90 (width *. 0.9)
       )) in
     let t2_r_ctrl1= t2_ctrl1 in
     let t2_r_ctrl2= t2_ctrl2 in
-    let t2_l_ctrl2= Ops.(t2_ctrl1 - Line.extended_vec ~vec:t2_vec_anti90 (width *. 1.0)) in
-    let t2_l_ctrl1= Ops.(t2_ctrl2 - Line.extended_vec ~vec:t2_vec_anti90 (width *. 0.7)) in
+    let t2_l_ctrl2= Ops.(t2_ctrl1 - Line.extended_vec t2_vec_anti90 (width *. 1.0)) in
+    let t2_l_ctrl1= Ops.(t2_ctrl2 - Line.extended_vec t2_vec_anti90 (width *. 0.7)) in
 
     let ht2_projection=
       let vec= Ops.(t2_r_ctrl1 - ht2_right) in
@@ -3160,18 +3158,18 @@ module To_path(Width : sig val width : float end) = struct
     let t_vec_anti90= Matrix.(apply anticlock_90 t_vec) in
     let t_ctrl1= get_adjust htcj.t_ctrl1
       ~f:(fun()-> Ops.(ht_right
-      + Line.extended_vec ~vec:t_vec (t_length *. 0.3)
-      + Line.extended_vec ~vec:t_vec_anti90 (width *. 1.0)
+      + Line.extended_vec t_vec (t_length *. 0.3)
+      + Line.extended_vec t_vec_anti90 (width *. 1.0)
       )) in
     let t_ctrl2= get_adjust htcj.t_ctrl2
       ~f:(fun()-> Ops.(ht_right
-      + Line.extended_vec ~vec:t_vec (t_length *. 0.7)
-      + Line.extended_vec ~vec:t_vec_anti90 (width *. 1.0)
+      + Line.extended_vec t_vec (t_length *. 0.7)
+      + Line.extended_vec t_vec_anti90 (width *. 1.0)
       )) in
-    let t_r_ctrl1= Ops.(t_ctrl1 + Line.extended_vec ~vec:t_vec_anti90 (width *. 0.0)) in
-    let t_r_ctrl2= Ops.(t_ctrl2 + Line.extended_vec ~vec:t_vec_anti90 (width *. 0.0)) in
-    let t_l_ctrl2= Ops.(t_ctrl1 - Line.extended_vec ~vec:t_vec_anti90 (width *. 0.8)) in
-    let t_l_ctrl1= Ops.(t_ctrl2 - Line.extended_vec ~vec:t_vec_anti90 (width *. 0.8)) in
+    let t_r_ctrl1= Ops.(t_ctrl1 + Line.extended_vec t_vec_anti90 (width *. 0.0)) in
+    let t_r_ctrl2= Ops.(t_ctrl2 + Line.extended_vec t_vec_anti90 (width *. 0.0)) in
+    let t_l_ctrl2= Ops.(t_ctrl1 - Line.extended_vec t_vec_anti90 (width *. 0.8)) in
+    let t_l_ctrl1= Ops.(t_ctrl2 - Line.extended_vec t_vec_anti90 (width *. 0.8)) in
 
     let ht_projection=
       let vec= Ops.(t_r_ctrl1 - ht_right) in
@@ -3201,18 +3199,18 @@ module To_path(Width : sig val width : float end) = struct
     let c_length= distance c_vec in
     let c_ctrl1= get_adjust htcj.c_ctrl1
       ~f:(fun()-> Ops.(ht_end_cj
-      + Line.extended_vec ~vec:c_vec (c_length *. 0.3)
-      + Line.extended_vec ~vec:c_vec_anti90 (width*.1.0)
+      + Line.extended_vec c_vec (c_length *. 0.3)
+      + Line.extended_vec c_vec_anti90 (width*.1.0)
       )) in
     let c_ctrl2= get_adjust htcj.c_ctrl2
       ~f:(fun()-> Ops.(ht_end_cj
-      + Line.extended_vec ~vec:c_vec (c_length *. 0.7)
-      + Line.extended_vec ~vec:c_vec_anti90 (width*.1.0)
+      + Line.extended_vec c_vec (c_length *. 0.7)
+      + Line.extended_vec c_vec_anti90 (width*.1.0)
       )) in
-    let c_r_ctrl1= Ops.(c_ctrl1 + Line.extended_vec ~vec:c_vec_anti90 (width *. 1.2)) in
-    let c_r_ctrl2= Ops.(c_ctrl2 + Line.extended_vec ~vec:c_vec_anti90 (width *. 1.0)) in
-    let c_l_ctrl2= Ops.(c_ctrl1 + Line.extended_vec ~vec:c_vec_anti90 (width *. 0.2)) in
-    let c_l_ctrl1= Ops.(c_ctrl2 + Line.extended_vec ~vec:c_vec_anti90 (width *. 0.2)) in
+    let c_r_ctrl1= Ops.(c_ctrl1 + Line.extended_vec c_vec_anti90 (width *. 1.2)) in
+    let c_r_ctrl2= Ops.(c_ctrl2 + Line.extended_vec c_vec_anti90 (width *. 1.0)) in
+    let c_l_ctrl2= Ops.(c_ctrl1 + Line.extended_vec c_vec_anti90 (width *. 0.2)) in
+    let c_l_ctrl1= Ops.(c_ctrl2 + Line.extended_vec c_vec_anti90 (width *. 0.2)) in
 
     let j_start= c_end in
     let j_end= get_adjust htcj.end_ ~f:(fun()->
@@ -3222,7 +3220,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let j_pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= let open Ops in
       let p_toward= { x= t_top_right.x; y= c_end.y -. width *. 1. } in
@@ -3233,10 +3231,10 @@ module To_path(Width : sig val width : float end) = struct
       let after= Bezier.lerp3 ht_end_cj c_ctrl1 c_ctrl2 c_end 0.8001 in
       let vec_t_0d8= Ops.(after - before) in
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.0.8))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.0.8))
     in
     let pre_j_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length -. width *. 1.5)
+      j_end + Line.extended_vec vec_j_up (j_length -. width *. 1.5)
     in
     let c_j_t_left=
       let line1= Line.of_points c_l_ctrl1 j_t_left
@@ -3426,18 +3424,18 @@ module To_path(Width : sig val width : float end) = struct
     let t1_vec_anti90= Matrix.(apply anticlock_90 t1_vec) in
     let t1_ctrl1= get_adjust hthtj.t1_ctrl1
       ~f:(fun()-> Ops.(ht1_right
-      + Line.extended_vec ~vec:t1_vec (t1_length *. 0.3)
-      + Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.6)
+      + Line.extended_vec t1_vec (t1_length *. 0.3)
+      + Line.extended_vec t1_vec_anti90 (width *. 0.6)
       )) in
     let t1_ctrl2= get_adjust hthtj.t1_ctrl2
       ~f:(fun()-> Ops.(ht1_right
-      + Line.extended_vec ~vec:t1_vec (t1_length *. 0.7)
-      + Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.9)
+      + Line.extended_vec t1_vec (t1_length *. 0.7)
+      + Line.extended_vec t1_vec_anti90 (width *. 0.9)
       )) in
     let t1_r_ctrl1= t1_ctrl1 in
     let t1_r_ctrl2= t1_ctrl1 in
-    let t1_l_ctrl2= Ops.(t1_ctrl1 - Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.8)) in
-    let t1_l_ctrl1= Ops.(t1_ctrl2 - Line.extended_vec ~vec:t1_vec_anti90 (width *. 0.8)) in
+    let t1_l_ctrl2= Ops.(t1_ctrl1 - Line.extended_vec t1_vec_anti90 (width *. 0.8)) in
+    let t1_l_ctrl1= Ops.(t1_ctrl2 - Line.extended_vec t1_vec_anti90 (width *. 0.8)) in
 
     let ht1_projection=
       let vec= Ops.(t1_r_ctrl1 - ht1_right) in
@@ -3479,17 +3477,17 @@ module To_path(Width : sig val width : float end) = struct
     let t2_end= ht2_end in
     let t2_ctrl1= get_adjust hthtj.t2_ctrl1
       ~f:(fun()-> Ops.(ht2_right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.3)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 0.9)
+      + Line.extended_vec t2_vec (t2_length *. 0.3)
+      + Line.extended_vec t2_vec_anti90 (width *. 0.9)
       )) in
     let t2_ctrl2= get_adjust hthtj.t2_ctrl2
       ~f:(fun()-> Ops.(ht2_right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.7)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 1.0)
+      + Line.extended_vec t2_vec (t2_length *. 0.7)
+      + Line.extended_vec t2_vec_anti90 (width *. 1.0)
       )) in
     let t2_r_ctrl1= t2_ctrl1 in
     let t2_r_ctrl2= t2_ctrl2 in
-    let t2_l_ctrl2= Ops.(t2_ctrl1 - Line.extended_vec ~vec:t2_vec_anti90 (width *. 1.0)) in
+    let t2_l_ctrl2= Ops.(t2_ctrl1 - Line.extended_vec t2_vec_anti90 (width *. 1.0)) in
 
     let ht2_projection=
       let vec= Ops.(t2_r_ctrl1 - ht2_right) in
@@ -3521,7 +3519,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= let open Ops in
       let p_toward= { x= t2_top_right.x; y= ht2_end.y -. width *. 1. } in
@@ -3534,10 +3532,10 @@ module To_path(Width : sig val width : float end) = struct
       let after= Bezier.lerp3 t2_top_right t2_r_ctrl1 t2_r_ctrl2 ht2_end (pos +. 0.0001) in
       let vec_t_0d8= Ops.(after - before) in
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
     in
     let pre_j_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length *. 0.6)
+      j_end + Line.extended_vec vec_j_up (j_length *. 0.6)
     in
     let c_j_t_left=
       let line1= Line.of_points t2_l_ctrl2 j_t_left
@@ -3631,10 +3629,10 @@ module To_path(Width : sig val width : float end) = struct
       let r_u= if r_u > pi then pi *. 2. -. r_u  else r_u in
       let adjust= Float.pow (r_u /. (pi/.2.)*.1.2) 2. in
       { down with y= down.y -. width *. (1.2+.adjust) } in
-    let post_end= Ops.(end' + Line.extended_vec ~vec:vec_u_clock90 (width*.0.2)) in
+    let post_end= Ops.(end' + Line.extended_vec vec_u_clock90 (width*.0.2)) in
     let c_u_down=
       let p= Ops.(down *< 0.7 + end' *< 0.3) in
-      Ops.(p - Line.extended_vec ~vec:vec_u_clock90 (width*.0.1)) in
+      Ops.(p - Line.extended_vec vec_u_clock90 (width*.0.1)) in
     let u_left= {
       x= down.x -. width *. 1.2;
       y= down.y -. width *. 1.4;
@@ -3787,10 +3785,10 @@ module To_path(Width : sig val width : float end) = struct
       and line2= Line.of_points h2_down_left h2_down_c in
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let end_up_c= Ops.(h2_up_right +
-      Line.extended_vec ~vec:(h2_up_right - h2_up_c) (width *. 0.4)
+      Line.extended_vec (h2_up_right - h2_up_c) (width *. 0.4)
       )
     and end_down_c= Ops.(h2_down_right +
-      Line.extended_vec ~vec:(h2_down_right - h2_down_c) (width *. 1.2)
+      Line.extended_vec (h2_down_right - h2_down_c) (width *. 1.2)
       ) in
     let segments= [
       Line v1;
@@ -3841,7 +3839,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j_clock90= Matrix.(apply clockwise_90 vec_j) in
     let j_length= distance vec_j in
     let end_post= Ops.(end' +
-      Line.extended_vec ~vec:vec_j_clock90 (width*.0.2)) in
+      Line.extended_vec vec_j_clock90 (width*.0.2)) in
     let radius= get_adjust vaj.a_radius ~f:(fun()-> width) in
     let v_top_left= start in
     let v_top_right= { v_top_left with x= v_top_left.x +. width } in
@@ -3873,9 +3871,9 @@ module To_path(Width : sig val width : float end) = struct
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let vec_h2_up_right= Ops.(h2_up_right - h2_up_c) in
     let h2_j_c1= Ops.( h2_up_right+
-      Line.extended_vec ~vec:vec_h2_up_right (j_length*.0.25)) in
+      Line.extended_vec vec_h2_up_right (j_length*.0.25)) in
     let h2_j_c2= Ops.(end' -
-      Line.extended_vec ~vec:vec_j (j_length*.0.133)) in
+      Line.extended_vec vec_j (j_length*.0.133)) in
     let j_h2_right_c= {
       x= end_post.x*.0.95+.j_right.x*.0.05;
       y= j_right.y+.width*.0.1} in
@@ -3884,7 +3882,7 @@ module To_path(Width : sig val width : float end) = struct
       and line2= Line.of_points h2_down_left h2_down_c in
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let end_down_c= Ops.(h2_down_right +
-      Line.extended_vec ~vec:(h2_down_right - h2_down_c) (width *. 1.6)
+      Line.extended_vec (h2_down_right - h2_down_c) (width *. 1.6)
       ) in
     let segments= [
       Line v1;
@@ -4036,21 +4034,21 @@ module To_path(Width : sig val width : float end) = struct
     let t_length= Point.distance vec_t in
     let vec_t_clock90= Matrix.(apply clockwise_90 vec_t) in
     let vec_t_anti90= Matrix.(apply anticlock_90 vec_t) in
-    let end_post= Ops.(end' + Line.extended_vec ~vec:vec_t_clock90 (width *.0.3)) in
+    let end_post= Ops.(end' + Line.extended_vec vec_t_clock90 (width *.0.3)) in
     let ctrl1= get_adjust vht.ctrl1
       ~f:(fun()-> Ops.(h_right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.3)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 1.0)
+      + Line.extended_vec vec_t (t_length *. 0.3)
+      + Line.extended_vec vec_t_anti90 (width *. 1.0)
       )) in
     let ctrl2= get_adjust vht.ctrl2
       ~f:(fun()-> Ops.(h_right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.7)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.9)
+      + Line.extended_vec vec_t (t_length *. 0.7)
+      + Line.extended_vec vec_t_anti90 (width *. 0.9)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
-    let l_ctrl2= Ops.(ctrl1 - Line.extended_vec ~vec:vec_t_anti90 (width *. 0.9)) in
-    let l_ctrl1= Ops.(ctrl2 - Line.extended_vec ~vec:vec_t_anti90 (width *. 0.7)) in
+    let l_ctrl2= Ops.(ctrl1 - Line.extended_vec vec_t_anti90 (width *. 0.9)) in
+    let l_ctrl1= Ops.(ctrl2 - Line.extended_vec vec_t_anti90 (width *. 0.7)) in
 
     let projection=
       let vec= Ops.(r_ctrl1 - h_right) in
@@ -4157,30 +4155,30 @@ module To_path(Width : sig val width : float end) = struct
     let t_top_right= { t_top_left with x= t_top_left.x +. width*.1. } in
     let ctrl1= get_adjust vhtj.ctrl1
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.5)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 1.5)
+      + Line.extended_vec vec_t (t_length *. 0.5)
+      + Line.extended_vec vec_t_anti90 (width *. 1.5)
       )) in
     let ctrl2= get_adjust vhtj.ctrl2
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.9)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.8)
+      + Line.extended_vec vec_t (t_length *. 0.9)
+      + Line.extended_vec vec_t_anti90 (width *. 0.8)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let l_t_ctrl= let open Ops in
-      r_ctrl1 + Line.extended_vec ~vec:vec_t_clock90 (width*.1.2)
+      r_ctrl1 + Line.extended_vec vec_t_clock90 (width*.1.2)
     in
     let j_start= t_end in
     let j_end= get_adjust vhtj.end_ ~f:(fun()->
       (* adjust j angle *)
       let vec= Matrix.(apply (clockwise ~radian:(pi*.0.55)) vec_t) in
-      Ops.(j_start + Line.extended_vec ~vec (width *. 2.7))
+      Ops.(j_start + Line.extended_vec vec (width *. 2.7))
     ) in
     let j_end_c= {x= j_start.x; y= j_start.y-. width*.0.8} in
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= Matrix.(apply (clockwise ~radian:(pi*.0.85)) vec_j) in
     let j_t_left=
@@ -4190,10 +4188,10 @@ module To_path(Width : sig val width : float end) = struct
       let vec_t_0d8= Ops.(after - before) in
       (* adjust j_up_line *)
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
     in
     let pre_j_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length -. width*.1.0)
+      j_end + Line.extended_vec vec_j_up (j_length -. width*.1.0)
     in
     let j_t_left_c=
       let line1= Line.of_points l_t_ctrl j_t_left
@@ -4259,17 +4257,17 @@ module To_path(Width : sig val width : float end) = struct
     let c_j_end= {x= j_down.x; y= j_down.y-. width*.0.8} in
     let vec_j= Ops.(j_end - j_start) in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= let open Ops in
       let p_toward= { x= j_start.x; y= v_end.y -. width *. 1. } in
       p_toward - j_end in
     let j_v_left= {x= j_start.x -. width; y= j_start.y} in
     let pre_j_v_left= let open Ops in
-      let line1= Line.of_points j_end (j_end + Line.extended_vec ~vec:vec_j_up 1.)
+      let line1= Line.of_points j_end (j_end + Line.extended_vec vec_j_up 1.)
       and line2= Line.of_points start j_v_left in
       let x= Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
-      x - Line.extended_vec ~vec:vec_j_up (width*.0.5)
+      x - Line.extended_vec vec_j_up (width*.0.5)
     in
     let c_j_v_left=
       let line1= Line.of_points start j_v_left
@@ -4345,10 +4343,10 @@ module To_path(Width : sig val width : float end) = struct
       and line2= Line.of_points h2_down_left h2_down_c in
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let end_up_c= Ops.(h2_up_left +
-      Line.extended_vec ~vec:(h2_up_left - h2_up_c) (width *. 0.4)
+      Line.extended_vec (h2_up_left - h2_up_c) (width *. 0.4)
       )
     and end_down_c= Ops.(h2_down_right +
-      Line.extended_vec ~vec:(h2_down_right - h2_down_c) (width *. 1.2)
+      Line.extended_vec (h2_down_right - h2_down_c) (width *. 1.2)
       ) in
     let segments= [
       Line a_start_left;
@@ -4399,7 +4397,7 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j_anti90= Matrix.(apply anticlock_90 vec_j) in
     let j_length= distance vec_j in
     let end_post= Ops.(end' +
-      Line.extended_vec ~vec:vec_j_anti90 (width*.0.2)) in
+      Line.extended_vec vec_j_anti90 (width*.0.2)) in
     let radius= get_adjust vcj.a_radius ~f:(fun()-> width) in
     let v_top_right= start in
     let v_top_left= { v_top_right with x= v_top_right.x -. width } in
@@ -4431,9 +4429,9 @@ module To_path(Width : sig val width : float end) = struct
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let vec_h2_up_left= Ops.(h2_up_left - h2_up_c) in
     let h2_j_c1= Ops.( h2_up_left+
-      Line.extended_vec ~vec:vec_h2_up_left (j_length*.0.25)) in
+      Line.extended_vec vec_h2_up_left (j_length*.0.25)) in
     let h2_j_c2= Ops.(end' -
-      Line.extended_vec ~vec:vec_j (j_length*.0.133)) in
+      Line.extended_vec vec_j (j_length*.0.133)) in
     let j_h2_left_c= {
       x= end_post.x*.0.95+.j_left.x*.0.05;
       y= j_left.y+.width*.0.1} in
@@ -4442,7 +4440,7 @@ module To_path(Width : sig val width : float end) = struct
       and line2= Line.of_points h2_down_right h2_down_c in
       Line.(intersection_of_lines line1 line2 |> get_intersection_point) in
     let end_down_c= Ops.(h2_down_left +
-      Line.extended_vec ~vec:(h2_down_left - h2_down_c) (width *. 1.6)
+      Line.extended_vec (h2_down_left - h2_down_c) (width *. 1.6)
       ) in
     let segments= [
       Line a_start_left;
@@ -4483,34 +4481,35 @@ module To_path(Width : sig val width : float end) = struct
     and t_end= tu.t_end in
     let vec_t= Ops.(t_end - start) in
     let t_length= distance vec_t in
-    let angle_t= angle vec_t in
+    let angle_t= radian vec_t in
     let u_start= t_end in
     let u_end= get_adjust tu.end_ ~f:(fun()->
       {x= u_start.x +. t_length; y= u_start.y -. width}
       ) in
     let vec_u= Ops.(u_end - u_start) in
-    let angle_u= angle vec_u in
+    let vec_u_clock90= Matrix.(apply clockwise_90 vec_u) in
+    let angle_u= radian vec_u in
     let t_p1_angle= angle_t -. pi/.1.8 in
     let t_p2_angle= t_p1_angle +. pi*.0.65 in
     let t_p1= Ops.(+) start @@
-      Line.extended_angle ~angle:t_p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:t_p1_angle (width*. 1.3)
     in
     let t_p2= Ops.(+) t_p1 @@
-      Line.extended_angle ~angle:t_p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:t_p2_angle (width*. 0.4)
     in
     let t_p3= Ops.(+) t_end @@
-      Line.extended_angle ~angle:angle_u (width*. 0.4)
+      Line.extended_angle ~radian:angle_u (width*. 0.4)
     in
     let t_down=
       let calc_ctrl= template_curve ~start:t_p2 ~end':t_p3 in
       let ctrl1= match tu.ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.3}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match tu.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.7}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= t_p3 }
     in
@@ -4526,30 +4525,25 @@ module To_path(Width : sig val width : float end) = struct
 
     let u_p0= u_start in
     let u_p1= u_end in
-    let u_slope=
-      let l= Ops.(u_p1 - u_p0) in
-      l.y /. l.x
-    in
-    let u_orth= Line.orth u_slope in
     let u_c1=
       let c= Ops.((u_p0 + u_p1) / {x=2.;y=2.}) in
-      Ops.(Line.extended_slope ~slope:u_orth (width*.0.3) + c)
+      Ops.(Line.extended_vec vec_u_clock90 (width*.0.3) + c)
     in
-    let u_p2= Ops.(Line.extended_slope ~slope:u_orth (width*.0.2) + u_p1) in
+    let u_p2= Ops.(Line.extended_vec vec_u_clock90 (width*.0.2) + u_p1) in
     let u_p3=
-      let c= Ops.(Line.extended_slope ~slope:u_slope (width*.0.8) + u_p0) in
-      Ops.(Line.extended_slope ~slope:u_orth (width*.1.0) + c)
+      let c= Ops.(Line.extended_vec vec_u (width*.0.8) + u_p0) in
+      Ops.(Line.extended_vec vec_u_clock90 (width*.1.0) + c)
     in
     let u_c3=
       let c= Ops.((u_p2 + u_p3) / {x=2.1;y=2.}) in
-      Ops.(Line.extended_slope ~slope:u_orth (width*.0.4) + c)
+      Ops.(Line.extended_vec vec_u_clock90 (width*.0.4) + c)
     in
     let u_p4=
-      let c= Ops.(Line.extended_slope ~slope:u_slope (width*.0.4) + u_p0) in
-      Ops.(Line.extended_slope ~slope:u_orth (width*.1.3) + c)
+      let c= Ops.(Line.extended_vec vec_u (width*.0.4) + u_p0) in
+      Ops.(Line.extended_vec vec_u_clock90 (width*.1.3) + c)
     in
-    let u_c4= Ops.(Line.extended_slope ~slope:u_slope (width/.4.) + u_p4) in
-    let u_c5= Ops.(Line.extended_slope ~slope:u_slope (-.width/.4.) + u_p4) in
+    let u_c4= Ops.(Line.extended_vec vec_u (width/.4.) + u_p4) in
+    let u_c5= Ops.(Line.extended_vec vec_u (-.width/.4.) + u_p4) in
 
     let segments= [
       Line t_p1;
@@ -4591,16 +4585,16 @@ module To_path(Width : sig val width : float end) = struct
     and t_end= th.t_end in
     let vec_t= Ops.(t_end - start) in
     let t_length= distance vec_t in
-    let angle_t= angle vec_t in
+    let angle_t= radian vec_t in
     let h_start= t_end in
     let h_length= get_adjust th.length ~f:(fun()-> t_length) in
     let t_p1_angle= angle_t -. pi/.1.8 in
     let t_p2_angle= t_p1_angle +. pi*.0.65 in
     let t_p1= Ops.(+) start @@
-      Line.extended_angle ~angle:t_p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:t_p1_angle (width*. 1.3)
     in
     let t_p2= Ops.(+) t_p1 @@
-      Line.extended_angle ~angle:t_p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:t_p2_angle (width*. 0.4)
     in
     let t_p3= {t_end with x= t_end.x +. width *.0.4} in
     let t_down=
@@ -4608,11 +4602,11 @@ module To_path(Width : sig val width : float end) = struct
       let ctrl1= match th.ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.3}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match th.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.7}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= t_p3 }
     in
@@ -4685,14 +4679,14 @@ module To_path(Width : sig val width : float end) = struct
     let start= td.td_start
     and t_end= td.t_end in
     let vec_t= Ops.(t_end - start) in
-    let angle_t= angle vec_t in
+    let angle_t= radian vec_t in
     let t_p1_angle= angle_t -. pi/.1.8 in
     let t_p2_angle= t_p1_angle +. pi*.0.65 in
     let t_p1= Ops.(+) start @@
-      Line.extended_angle ~angle:t_p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:t_p1_angle (width*. 1.3)
     in
     let t_p2= Ops.(+) t_p1 @@
-      Line.extended_angle ~angle:t_p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:t_p2_angle (width*. 0.4)
     in
     let t_p3= {t_end with x= t_end.x +. width *.0.4} in
     let t_down=
@@ -4700,11 +4694,11 @@ module To_path(Width : sig val width : float end) = struct
       let ctrl1= match td.ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.3}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match td.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.7}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= t_p3 }
     in
@@ -4728,17 +4722,17 @@ module To_path(Width : sig val width : float end) = struct
     let vec_d_anti45= Matrix.(apply (anticlock ~radian:(pi /. 4.)) vec_d) in
     let vec_d_anti45_neg= neg vec_d_anti45 in
     let d0= d_start in
-    let d1= Ops.(d0 + Line.extended_vec ~vec:vec_d_anti90 (max 1. (width/.8.))) in
+    let d1= Ops.(d0 + Line.extended_vec vec_d_anti90 (max 1. (width/.8.))) in
     let d_r_ctrl1=
-      let p= Ops.(d1 + Line.extended_vec ~vec:vec_d (d_length*.0.8)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (width*.2.0)) in
+      let p= Ops.(d1 + Line.extended_vec vec_d (d_length*.0.8)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (width*.2.0)) in
     let d_r_ctrl2=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45 (width*.0.6)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45 (width*.0.6)) in
     let d_l_ctrl1=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45_neg (width*.0.2)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45_neg (width*.0.2)) in
     let d_l_ctrl2=
-      let p= Ops.(d0 + Line.extended_vec ~vec:vec_d (d_length*.0.75)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (d_length*.0.08)) in
+      let p= Ops.(d0 + Line.extended_vec vec_d (d_length*.0.75)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (d_length*.0.08)) in
 
     let segments= [
       Line t_p1;
@@ -4825,14 +4819,14 @@ module To_path(Width : sig val width : float end) = struct
     and t_end= wtd.t_end in
     let vec_t= Ops.(t_end - start) in
     let t_length= distance vec_t in
-    let angle_t= angle vec_t in
+    let angle_t= radian vec_t in
     let t_p1_angle= angle_t -. pi/.1.8 in
     let t_p2_angle= t_p1_angle +. pi*.0.65 in
     let t_p1= Ops.(+) start @@
-      Line.extended_angle ~angle:t_p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:t_p1_angle (width*. 1.3)
     in
     let t_p2= Ops.(+) t_p1 @@
-      Line.extended_angle ~angle:t_p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:t_p2_angle (width*. 0.4)
     in
     let t_p3= {t_end with x= t_end.x +. width *.0.4} in
     let t_down=
@@ -4840,11 +4834,11 @@ module To_path(Width : sig val width : float end) = struct
       let ctrl1= match wtd.ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.04; y= 0.3}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.5)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.5)
       and ctrl2= match wtd.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.04; y= 0.7}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(angle_t-. (pi*.0.5)) (width*. 0.4)
+            Line.extended_angle ~radian:(angle_t-. (pi*.0.5)) (width*. 0.4)
       in
       Ccurve {ctrl1; ctrl2; end'= t_p3 }
     in
@@ -4869,17 +4863,17 @@ module To_path(Width : sig val width : float end) = struct
     let vec_d_anti45= Matrix.(apply (anticlock ~radian:(pi /. 4.)) vec_d) in
     let vec_d_anti45_neg= neg vec_d_anti45 in
     let d0= d_start in
-    let d1= Ops.(d0 + Line.extended_vec ~vec:vec_d_anti90 (max 1. (width/.8.))) in
+    let d1= Ops.(d0 + Line.extended_vec vec_d_anti90 (max 1. (width/.8.))) in
     let d_r_ctrl1=
-      let p= Ops.(d1 + Line.extended_vec ~vec:vec_d (d_length*.0.8)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (width*.2.0)) in
+      let p= Ops.(d1 + Line.extended_vec vec_d (d_length*.0.8)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (width*.2.0)) in
     let d_r_ctrl2=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45 (width*.0.6)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45 (width*.0.6)) in
     let d_l_ctrl1=
-      Ops.(end_ + Line.extended_vec ~vec:vec_d_anti45_neg (width*.0.2)) in
+      Ops.(end_ + Line.extended_vec vec_d_anti45_neg (width*.0.2)) in
     let d_l_ctrl2=
-      let p= Ops.(d0 + Line.extended_vec ~vec:vec_d (d_length*.0.75)) in
-      Ops.(p + Line.extended_vec ~vec:vec_d_anti90 (d_length*.0.08)) in
+      let p= Ops.(d0 + Line.extended_vec vec_d (d_length*.0.75)) in
+      Ops.(p + Line.extended_vec vec_d_anti90 (d_length*.0.08)) in
 
     let segments= [
       Line t_p1;
@@ -4924,14 +4918,14 @@ module To_path(Width : sig val width : float end) = struct
     let end'= tht.end_ in
 
     let vec_t1= Ops.(t1_end - start) in
-    let t1_angle= angle vec_t1 in
+    let t1_angle= radian vec_t1 in
     let t1_p1_angle= t1_angle -. pi/.1.8 in
     let t1_p2_angle= t1_p1_angle +. pi*.0.65 in
     let t1_p1= Ops.(+) start @@
-      Line.extended_angle ~angle:t1_p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:t1_p1_angle (width*. 1.3)
     in
     let t1_p2= Ops.(+) t1_p1 @@
-      Line.extended_angle ~angle:t1_p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:t1_p2_angle (width*. 0.4)
     in
     let t1_p3= {t1_end with x= t1_end.x +. width *.0.4} in
     let t1_down=
@@ -4939,11 +4933,11 @@ module To_path(Width : sig val width : float end) = struct
       let ctrl1= match tht.t1_ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.3}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(t1_angle-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(t1_angle-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match tht.t1_ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.7}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(t1_angle-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(t1_angle-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= t1_p3 }
     in
@@ -4969,21 +4963,21 @@ module To_path(Width : sig val width : float end) = struct
     let t2_length= Point.distance t2_vec in
     let t2_vec_clock90= Matrix.(apply clockwise_90 t2_vec) in
     let t2_vec_anti90= Matrix.(apply anticlock_90 t2_vec) in
-    let t2_end_post= Ops.(end' + Line.extended_vec ~vec:t2_vec_clock90 (width *.0.3)) in
+    let t2_end_post= Ops.(end' + Line.extended_vec t2_vec_clock90 (width *.0.3)) in
     let t2_ctrl1= get_adjust tht.t2_ctrl1
       ~f:(fun()-> Ops.(h_right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.3)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 1.0)
+      + Line.extended_vec t2_vec (t2_length *. 0.3)
+      + Line.extended_vec t2_vec_anti90 (width *. 1.0)
       )) in
     let t2_ctrl2= get_adjust tht.t2_ctrl2
       ~f:(fun()-> Ops.(h_right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.7)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 0.9)
+      + Line.extended_vec t2_vec (t2_length *. 0.7)
+      + Line.extended_vec t2_vec_anti90 (width *. 0.9)
       )) in
     let t2_r_ctrl1= t2_ctrl1 in
     let t2_r_ctrl2= t2_ctrl2 in
-    let t2_l_ctrl2= Ops.(t2_ctrl1 - Line.extended_vec ~vec:t2_vec_anti90 (width *. 0.9)) in
-    let t2_l_ctrl1= Ops.(t2_ctrl2 - Line.extended_vec ~vec:t2_vec_anti90 (width *. 0.7)) in
+    let t2_l_ctrl2= Ops.(t2_ctrl1 - Line.extended_vec t2_vec_anti90 (width *. 0.9)) in
+    let t2_l_ctrl1= Ops.(t2_ctrl2 - Line.extended_vec t2_vec_anti90 (width *. 0.7)) in
 
     let projection=
       let vec= Ops.(t2_r_ctrl1 - h_right) in
@@ -5059,14 +5053,14 @@ module To_path(Width : sig val width : float end) = struct
     let t1_end= thtj.t1_end in
 
     let vec_t1= Ops.(t1_end - start) in
-    let t1_angle= angle vec_t1 in
+    let t1_angle= radian vec_t1 in
     let t1_p1_angle= t1_angle -. pi/.1.8 in
     let t1_p2_angle= t1_p1_angle +. pi*.0.65 in
     let t1_p1= Ops.(+) start @@
-      Line.extended_angle ~angle:t1_p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:t1_p1_angle (width*. 1.3)
     in
     let t1_p2= Ops.(+) t1_p1 @@
-      Line.extended_angle ~angle:t1_p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:t1_p2_angle (width*. 0.4)
     in
     let t1_p3= {t1_end with x= t1_end.x +. width *.0.4} in
     let t1_down=
@@ -5074,11 +5068,11 @@ module To_path(Width : sig val width : float end) = struct
       let ctrl1= match thtj.t1_ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.3}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(t1_angle-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(t1_angle-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match thtj.t1_ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.7}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(t1_angle-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(t1_angle-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= t1_p3 }
     in
@@ -5122,30 +5116,30 @@ module To_path(Width : sig val width : float end) = struct
     let t2_top_right= { t2_top_left with x= t2_top_left.x +. width*.1. } in
     let t2_ctrl1= get_adjust thtj.t2_ctrl1
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.5)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 1.5)
+      + Line.extended_vec t2_vec (t2_length *. 0.5)
+      + Line.extended_vec t2_vec_anti90 (width *. 1.5)
       )) in
     let t2_ctrl2= get_adjust thtj.t2_ctrl2
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:t2_vec (t2_length *. 0.9)
-      + Line.extended_vec ~vec:t2_vec_anti90 (width *. 0.8)
+      + Line.extended_vec t2_vec (t2_length *. 0.9)
+      + Line.extended_vec t2_vec_anti90 (width *. 0.8)
       )) in
     let t2_r_ctrl1= t2_ctrl1 in
     let t2_r_ctrl2= t2_ctrl2 in
     let t2_l_ctrl= let open Ops in
-      t2_r_ctrl1 + Line.extended_vec ~vec:t2_vec_clock90 (width*.1.2)
+      t2_r_ctrl1 + Line.extended_vec t2_vec_clock90 (width*.1.2)
     in
     let j_start= t2_end in
     let j_end= get_adjust thtj.end_ ~f:(fun()->
       (* adjust j angle *)
       let vec= Matrix.(apply (clockwise ~radian:(pi*.0.55)) t2_vec) in
-      Ops.(j_start + Line.extended_vec ~vec (width *. 2.7))
+      Ops.(j_start + Line.extended_vec vec (width *. 2.7))
     ) in
     let j2_end_c= {x= j_start.x; y= j_start.y-. width*.0.8} in
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= Matrix.(apply (clockwise ~radian:(pi*.0.85)) vec_j) in
     let j_t2_left=
@@ -5155,10 +5149,10 @@ module To_path(Width : sig val width : float end) = struct
       let vec_t_0d8= Ops.(after - before) in
       (* adjust j_up_line *)
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
     in
     let pre_j2_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length -. width*.1.0)
+      j_end + Line.extended_vec vec_j_up (j_length -. width*.1.0)
     in
     let j_t2_left_c=
       let line1= Line.of_points t2_l_ctrl j_t2_left
@@ -5222,38 +5216,38 @@ module To_path(Width : sig val width : float end) = struct
     let t_p1_vec= Matrix.(apply (anticlock ~radian:(pi*.0.45)) vec_t) in
     let t_p2_vec= Matrix.(apply (clockwise ~radian:(pi*.0.65)) t_p1_vec) in
     let t_p1= Ops.(+) start @@
-      Line.extended_vec ~vec:t_p1_vec (width*. 1.5)
+      Line.extended_vec t_p1_vec (width*. 1.5)
     in
     let t_p2= Ops.(+) t_p1 @@
-      Line.extended_vec ~vec:t_p2_vec (width*. 0.45)
+      Line.extended_vec t_p2_vec (width*. 0.45)
     in
 
     let ctrl1= get_adjust tj.ctrl1
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.5)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 1.5)
+      + Line.extended_vec vec_t (t_length *. 0.5)
+      + Line.extended_vec vec_t_anti90 (width *. 1.5)
       )) in
     let ctrl2= get_adjust tj.ctrl2
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_t (t_length *. 0.9)
-      + Line.extended_vec ~vec:vec_t_anti90 (width *. 0.8)
+      + Line.extended_vec vec_t (t_length *. 0.9)
+      + Line.extended_vec vec_t_anti90 (width *. 0.8)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let l_t_ctrl= let open Ops in
-      r_ctrl1 + Line.extended_vec ~vec:vec_t_clock90 (width*.1.2)
+      r_ctrl1 + Line.extended_vec vec_t_clock90 (width*.1.2)
     in
     let j_start= t_end in
     let j_end= get_adjust tj.end_ ~f:(fun()->
       (* adjust j angle *)
       let vec= Matrix.(apply (clockwise ~radian:(pi*.0.6)) vec_t) in
-      Ops.(j_start + Line.extended_vec ~vec (width *. 2.7))
+      Ops.(j_start + Line.extended_vec vec (width *. 2.7))
     ) in
     let j_end_c= {x= j_start.x; y= j_start.y-. width*.0.8} in
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= Matrix.(apply (clockwise ~radian:(pi*.0.825)) vec_j) in
     let j_t_left=
@@ -5263,10 +5257,10 @@ module To_path(Width : sig val width : float end) = struct
       let vec_t_0d8= Ops.(after - before) in
       (* adjust j_up_line *)
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
     in
     let pre_j_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length -. width*.1.1)
+      j_end + Line.extended_vec vec_j_up (j_length -. width*.1.1)
     in
     let j_t_left_c=
       let line1= Line.of_points l_t_ctrl j_t_left
@@ -5316,38 +5310,38 @@ module To_path(Width : sig val width : float end) = struct
     let c_p1_vec= Matrix.(apply (anticlock ~radian:(pi*.0.45)) vec_c) in
     let c_p2_vec= Matrix.(apply (clockwise ~radian:(pi*.0.65)) c_p1_vec) in
     let c_p1= Ops.(+) start @@
-      Line.extended_vec ~vec:c_p1_vec (width*. 1.5)
+      Line.extended_vec c_p1_vec (width*. 1.5)
     in
     let c_p2= Ops.(+) c_p1 @@
-      Line.extended_vec ~vec:c_p2_vec (width*. 0.45)
+      Line.extended_vec c_p2_vec (width*. 0.45)
     in
 
     let ctrl1= get_adjust cj.ctrl1
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_c (c_length *. 0.5)
-      + Line.extended_vec ~vec:vec_c_anti90 (width *. 2.)
+      + Line.extended_vec vec_c (c_length *. 0.5)
+      + Line.extended_vec vec_c_anti90 (width *. 2.)
       )) in
     let ctrl2= get_adjust cj.ctrl2
       ~f:(fun()-> Ops.(right
-      + Line.extended_vec ~vec:vec_c (c_length *. 0.9)
-      + Line.extended_vec ~vec:Matrix.(apply (anticlock ~radian:(pi*.0.3)) vec_c) (width *. 3.0)
+      + Line.extended_vec vec_c (c_length *. 0.9)
+      + Line.extended_vec Matrix.(apply (anticlock ~radian:(pi*.0.3)) vec_c) (width *. 3.0)
       )) in
     let r_ctrl1= ctrl1 in
     let r_ctrl2= ctrl2 in
     let l_c_ctrl= let open Ops in
-      r_ctrl1 + Line.extended_vec ~vec:vec_c_clock90 (width*.1.2)
+      r_ctrl1 + Line.extended_vec vec_c_clock90 (width*.1.2)
     in
     let j_start= c_end in
     let j_end= get_adjust cj.end_ ~f:(fun()->
       (* adjust j angle *)
       let vec= Matrix.(apply (clockwise ~radian:(pi*.0.75)) vec_c) in
-      Ops.(j_start + Line.extended_vec ~vec (width *. 3.0))
+      Ops.(j_start + Line.extended_vec vec (width *. 3.0))
     ) in
     let j_end_c= {x= j_start.x; y= j_start.y-. width*.0.8} in
     let vec_j= Ops.(j_end - j_start) in
     let j_length= distance vec_j in
     let pre_end= Ops.(j_end +
-      Line.extended_vec ~vec:(Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
+      Line.extended_vec (Matrix.(apply anticlock_90 vec_j)) (width*.0.2)
     ) in
     let vec_j_up= Matrix.(apply (clockwise ~radian:(pi*.0.825)) vec_j) in
     let j_c_left=
@@ -5357,10 +5351,10 @@ module To_path(Width : sig val width : float end) = struct
       let vec_t_0d8= Ops.(after - before) in
       (* adjust j_up_line *)
       Ops.(right +
-        Line.extended_vec ~vec:Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
+        Line.extended_vec Matrix.(apply clockwise_90 vec_t_0d8) (width*.1.0))
     in
     let pre_j_v_left= let open Ops in
-      j_end + Line.extended_vec ~vec:vec_j_up (j_length -. width*.1.0)
+      j_end + Line.extended_vec vec_j_up (j_length -. width*.1.0)
     in
     let j_c_left_c=
       let line1= Line.of_points l_c_ctrl j_c_left
@@ -5409,21 +5403,21 @@ module To_path(Width : sig val width : float end) = struct
     let p_p1_vec= Matrix.(apply (anticlock ~radian:(pi*.0.3)) vec_p) in
     let p_p2_vec= Matrix.(apply (clockwise ~radian:(pi*.0.65)) p_p1_vec) in
     let p_p1= Ops.(+) start @@
-      Line.extended_vec ~vec:p_p1_vec (width*. 1.5)
+      Line.extended_vec p_p1_vec (width*. 1.5)
     in
     let p_p2= Ops.(+) p_p1 @@
-      Line.extended_vec ~vec:p_p2_vec (width*. 0.45)
+      Line.extended_vec p_p2_vec (width*. 0.45)
     in
 
     let ctrl1= get_adjust fpj.ctrl1
       ~f:(fun()-> Ops.(p_p2
-      + Line.extended_vec ~vec:vec_p (p_length *. 0.4)
-      + Line.extended_vec ~vec:vec_p_clock90 (p_length *. 0.18)
+      + Line.extended_vec vec_p (p_length *. 0.4)
+      + Line.extended_vec vec_p_clock90 (p_length *. 0.18)
       )) in
     let ctrl2= get_adjust fpj.ctrl2
       ~f:(fun()-> Ops.(p_p2
-      + Line.extended_vec ~vec:vec_p (p_length *. 0.625)
-      + Line.extended_vec ~vec:vec_p_clock90 (p_length *. 0.12)
+      + Line.extended_vec vec_p (p_length *. 0.625)
+      + Line.extended_vec vec_p_clock90 (p_length *. 0.12)
       )) in
     let _up_ctrl2= ctrl2 in
     let r_ctrl1= ctrl1 in
@@ -5451,17 +5445,17 @@ module To_path(Width : sig val width : float end) = struct
       let open Ops in
       let vec= Matrix.(apply clockwise_90 vec_end_p2) in
       let base= post_end *< 0.3 + p2 *< 0.7 in
-      base + Line.extended_vec ~vec (width*.0.6)
+      base + Line.extended_vec vec (width*.0.6)
     in
     let l_ctrl1= Ops.(ctrl2 +
-      Line.extended_vec ~vec:vec_p_clock90 (width *. 1.50)) in
+      Line.extended_vec vec_p_clock90 (width *. 1.50)) in
     let l_ctrl2= Ops.(ctrl1 +
-      Line.extended_vec ~vec:vec_p_clock90 (width *. 1.0)) in
+      Line.extended_vec vec_p_clock90 (width *. 1.0)) in
     let lerp_p_down= Bezier.lerp3 p_start l_ctrl2 l_ctrl1 p_end in
     let p_end_post=lerp_p_down 0.9 in
     let c2= let open Ops in
       let vec= p_end_post - l_ctrl1 in
-      p_end_post + Line.extended_vec ~vec (width*.1.5)
+      p_end_post + Line.extended_vec vec (width*.1.5)
     in
     let segments= [
       Line p_p1;
@@ -5507,21 +5501,21 @@ module To_path(Width : sig val width : float end) = struct
     let p_p1_vec= Matrix.(apply (anticlock ~radian:(pi*.0.25)) vec_p) in
     let p_p2_vec= Matrix.(apply (clockwise ~radian:(pi*.0.65)) p_p1_vec) in
     let p_p1= Ops.(+) start @@
-      Line.extended_vec ~vec:p_p1_vec (width*. 1.5)
+      Line.extended_vec p_p1_vec (width*. 1.5)
     in
     let p_p2= Ops.(+) p_p1 @@
-      Line.extended_vec ~vec:p_p2_vec (width*. 0.45)
+      Line.extended_vec p_p2_vec (width*. 0.45)
     in
 
     let ctrl1= get_adjust pj.ctrl1
       ~f:(fun()-> Ops.(p_p2
-      + Line.extended_vec ~vec:vec_p (p_length *. 0.4)
-      + Line.extended_vec ~vec:vec_p_clock90 (p_length *. 0.18)
+      + Line.extended_vec vec_p (p_length *. 0.4)
+      + Line.extended_vec vec_p_clock90 (p_length *. 0.18)
       )) in
     let ctrl2= get_adjust pj.ctrl2
       ~f:(fun()-> Ops.(p_p2
-      + Line.extended_vec ~vec:vec_p (p_length *. 0.625)
-      + Line.extended_vec ~vec:vec_p_clock90 (p_length *. 0.12)
+      + Line.extended_vec vec_p (p_length *. 0.625)
+      + Line.extended_vec vec_p_clock90 (p_length *. 0.12)
       )) in
     let _up_ctrl2= ctrl2 in
     let r_ctrl1= ctrl1 in
@@ -5549,17 +5543,17 @@ module To_path(Width : sig val width : float end) = struct
       let open Ops in
       let vec= Matrix.(apply clockwise_90 vec_end_p2) in
       let base= post_end *< 0.3 + p2 *< 0.7 in
-      base + Line.extended_vec ~vec (width*.0.6)
+      base + Line.extended_vec vec (width*.0.6)
     in
     let l_ctrl1= Ops.(ctrl2 +
-      Line.extended_vec ~vec:vec_p_clock90 (width *. 1.50)) in
+      Line.extended_vec vec_p_clock90 (width *. 1.50)) in
     let l_ctrl2= Ops.(ctrl1 +
-      Line.extended_vec ~vec:vec_p_clock90 (width *. 1.0)) in
+      Line.extended_vec vec_p_clock90 (width *. 1.0)) in
     let lerp_p_down= Bezier.lerp3 p_start l_ctrl2 l_ctrl1 p_end in
     let p_end_post=lerp_p_down 0.9 in
     let c2= let open Ops in
       let vec= p_end_post - l_ctrl1 in
-      p_end_post + Line.extended_vec ~vec (width*.1.5)
+      p_end_post + Line.extended_vec vec (width*.1.5)
     in
     let segments= [
       Line p_p1;
@@ -5608,14 +5602,14 @@ module To_path(Width : sig val width : float end) = struct
     let t1_end= thtaj.t_end in
 
     let vec_t1= Ops.(t1_end - start) in
-    let t1_angle= angle vec_t1 in
+    let t1_angle= radian vec_t1 in
     let t1_p1_angle= t1_angle -. pi/.1.8 in
     let t1_p2_angle= t1_p1_angle +. pi*.0.65 in
     let t1_p1= Ops.(+) start @@
-      Line.extended_angle ~angle:t1_p1_angle (width*. 1.3)
+      Line.extended_angle ~radian:t1_p1_angle (width*. 1.3)
     in
     let t1_p2= Ops.(+) t1_p1 @@
-      Line.extended_angle ~angle:t1_p2_angle (width*. 0.4)
+      Line.extended_angle ~radian:t1_p2_angle (width*. 0.4)
     in
     let t1_p3= {t1_end with x= t1_end.x +. width *.0.4} in
     let t1_down=
@@ -5623,11 +5617,11 @@ module To_path(Width : sig val width : float end) = struct
       let ctrl1= match thtaj.ctrl1 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.3}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(t1_angle-. (pi*.0.5)) (width*. 0.8)
+            Line.extended_angle ~radian:(t1_angle-. (pi*.0.5)) (width*. 0.8)
       and ctrl2= match thtaj.ctrl2 with
         | Auto-> calc_ctrl ~ratio:{x= 0.07; y= 0.7}
         | Specify p-> Ops.(+) p @@
-            Line.extended_angle ~angle:(t1_angle-. (pi*.0.5)) (width*. 0.6)
+            Line.extended_angle ~radian:(t1_angle-. (pi*.0.5)) (width*. 0.6)
       in
       Ccurve {ctrl1; ctrl2; end'= t1_p3 }
     in
@@ -5655,23 +5649,23 @@ module To_path(Width : sig val width : float end) = struct
     let vec_h2= Ops.(thtaj.a_end - h2_start) in
     let vec_h2_anti90= Matrix.(apply anticlock_90 vec_h2) in
     let a_center= Ops.(h2_start +
-      Line.extended_vec ~vec:vec_h2_anti90 a_radius) in
+      Line.extended_vec vec_h2_anti90 a_radius) in
     let vec_center_start= Ops.(h1_end - a_center) in
     let t2_end=
       let vec= Matrix.(apply anticlock_90 vec_center_start) in
-      Ops.(a_center + Line.extended_vec ~vec a_radius)
+      Ops.(a_center + Line.extended_vec vec a_radius)
     in
     let t2_vec= Ops.(t2_end - h1_end) in
     let t2_length= distance t2_vec in
     let t2_c= Ops.(
       (t2_end+h1_end) /< 2. +
       Line.extended_vec
-        ~vec:Matrix.(apply clockwise_90 t2_vec)
+        Matrix.(apply clockwise_90 t2_vec)
         (t2_length*.0.05)) in
     let h2_c= Ops.(
       (h2_start+h2_end) /< 2. +
       Line.extended_vec
-        ~vec:Matrix.(apply clockwise_90 vec_h2)
+        Matrix.(apply clockwise_90 vec_h2)
         (h2_length*.0.05)) in
     let a_c=
       let line1= Line.of_points t2_c t2_end
@@ -5711,17 +5705,17 @@ module To_path(Width : sig val width : float end) = struct
     let a_r_c= a_c in
     let up_h2_c= h2_c in
     let l_t2_c= Ops.(t2_c +
-      Line.extended_vec ~vec:Matrix.(apply clockwise_90 t2_vec) width) in
+      Line.extended_vec Matrix.(apply clockwise_90 t2_vec) width) in
     let l_a_c= Ops.(a_c +
-      Line.extended_vec ~vec:(a_c - a_center) (width*.1.5)) in
+      Line.extended_vec (a_c - a_center) (width*.1.5)) in
     let down_h2_c= {h2_c with y= h2_c.y+.width} in
 
     let h2_start_down= let open Ops in
       let vec= Matrix.(apply clockwise_90 (up_h2_c - h2_start)) in
-      h2_start + Line.extended_vec ~vec (width) in
+      h2_start + Line.extended_vec vec (width) in
     let t2_end_l= let open Ops in
       let vec= Matrix.(apply clockwise_90 (t2_end - t2_r_c)) in
-      Ops.(t2_end + Line.extended_vec ~vec width) in
+      Ops.(t2_end + Line.extended_vec vec width) in
 
     let j_start= {h2_end with x= h2_end.x -. width*.1.2} in
     let j_right= {x= h2_end.x; y= j_start.y -. width *. 0.1 } in
@@ -5730,21 +5724,21 @@ module To_path(Width : sig val width : float end) = struct
     let vec_j_clock90= Matrix.(apply clockwise_90 vec_j) in
     let j_length= distance vec_j in
     let end_post= Ops.(end' +
-      Line.extended_vec ~vec:vec_j_clock90 (width*.0.2)) in
+      Line.extended_vec vec_j_clock90 (width*.0.2)) in
 
     let h2_up_right=
       { x= j_start.x -. width*.0.8; y= j_start.y } in
 
     let vec_h2_up_right= Ops.(h2_up_right - up_h2_c) in
     let h2_j_c1= Ops.( h2_up_right+
-      Line.extended_vec ~vec:vec_h2_up_right (j_length*.0.25)) in
+      Line.extended_vec vec_h2_up_right (j_length*.0.25)) in
     let h2_j_c2= Ops.(end' -
-      Line.extended_vec ~vec:vec_j (j_length*.0.133)) in
+      Line.extended_vec vec_j (j_length*.0.133)) in
     let j_h2_right_c= {
       x= end_post.x*.0.95+.j_right.x*.0.05;
       y= j_right.y+.width*.0.1} in
     let end_down_c= Ops.(a_end_post +
-      Line.extended_vec ~vec:(a_end_post - down_h2_c) (width *. 1.6)
+      Line.extended_vec (a_end_post - down_h2_c) (width *. 1.6)
       ) in
     let segments= [
       Line t1_p1;
@@ -5850,10 +5844,10 @@ module To_path(Width : sig val width : float end) = struct
     let l1_p1_vec= Matrix.(apply (anticlock ~radian:(pi*.0.45)) l1_vec) in
     let l1_p2_vec= Matrix.(apply (clockwise ~radian:(pi*.0.65)) l1_p1_vec) in
     let l1_p1= Ops.(+) start @@
-      Line.extended_vec ~vec:l1_p1_vec (width*. 0.5)
+      Line.extended_vec l1_p1_vec (width*. 0.5)
     in
     let l1_p2= Ops.(+) l1_p1 @@
-      Line.extended_vec ~vec:l1_p2_vec (width*. 0.45)
+      Line.extended_vec l1_p2_vec (width*. 0.45)
     in
 
     let l1o_ctrl1= get_adjust tod.ctrl1 ~f:(fun ()->
@@ -5888,20 +5882,20 @@ module To_path(Width : sig val width : float end) = struct
 
     let l4i_end= {up with y= up.y +. width*.0.5} in
     let l4i_start= Ops.(l4o_end +
-      Line.extended_vec ~vec:l4o_vec_clock90 width)
+      Line.extended_vec l4o_vec_clock90 width)
     and l4i_ctrl1= Ops.(l4o_ctrl2 +
-      Line.extended_vec ~vec:l4o_vec_clock90 width)
+      Line.extended_vec l4o_vec_clock90 width)
     and l4i_ctrl2= {x= l4o_ctrl1.x -. width*.0.5; y= l4i_end.y} in
     let l4i= Ccurve {ctrl1=l4i_ctrl1; ctrl2=l4i_ctrl2; end'=l4i_end} in
 
     let oi_ctrl1=
       let open Ops in
       let vec= l4o_end - l4o_ctrl2 in
-      l4o_end + Line.extended_vec ~vec width
+      l4o_end + Line.extended_vec vec width
     and oi_ctrl2=
       let open Ops in
       let vec= l4i_start - l4i_ctrl1 in
-      l4i_start + Line.extended_vec ~vec width in
+      l4i_start + Line.extended_vec vec width in
     let oi= Ccurve {ctrl1=oi_ctrl1; ctrl2=oi_ctrl2; end'=l4i_start} in
 
     let l3i_end= {left with x= left.x +. width*.0.9} in
@@ -5918,10 +5912,10 @@ module To_path(Width : sig val width : float end) = struct
     let l1o_vec_clock90= Matrix.(apply clockwise_90) l1o_vec in
 
     let l1i_end= Ops.(start +
-      Line.extended_vec ~vec:l1o_vec_clock90 width)
+      Line.extended_vec l1o_vec_clock90 width)
     and l1i_ctrl1= {x= l1o_ctrl2.x -. width*.0.5; y= l2i_end.y}
     and l1i_ctrl2= Ops.(l1o_ctrl1 +
-      Line.extended_vec ~vec:l1o_vec_clock90 width) in
+      Line.extended_vec l1o_vec_clock90 width) in
     let l1i= Ccurve {ctrl1=l1i_ctrl1; ctrl2=l1i_ctrl2; end'=l1i_end} in
 
     let segments= [

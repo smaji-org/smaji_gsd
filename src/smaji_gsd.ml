@@ -9,6 +9,8 @@
  *)
 
 
+open! Smaji_glyph_path.Bugfix
+
 module Svg= Smaji_glyph_path.Svg
 module Glif= Smaji_glyph_path.Glif
 module Typeface= Typeface
@@ -18,6 +20,8 @@ module Stroke_black= Stroke_black
 module Stroke_ming= Stroke_ming
 module Path= Smaji_glyph_path.Path
 module Point= Smaji_glyph_path.Point
+
+open Smaji_glyph_path.Utils
 
 module EzxmlmFix = struct
   include Ezxmlm
@@ -1572,7 +1576,7 @@ module Raw = struct
     of_xml_node node
 
   let load_file path=
-    In_channel.with_open_text path @@ fun chan->
+    in_channel_with_open_text path @@ fun chan->
     let _dtd, node= EzxmlmFix.from_channel chan in
     of_xml_node node
 
@@ -1586,20 +1590,20 @@ type gsd= {
   elements: element list;
   comment: string;
 }
-and subgsd= { gsd: gsd; gframe: frame }
-and fstroke= { stroke: stroke; sframe: frame }
+and subgsd= { gsd: gsd; gsd_frame: frame }
+and framed_stroke= { stroke: stroke; stroke_frame: frame }
 and element=
-  | Stroke of fstroke
+  | Stroke of framed_stroke
   | SubGsd of subgsd
 
-let gsd_frame gsd=
+let gsd_bestfit gsd=
   ListLabels.fold_left gsd.elements
     ~init:frame_dummy
     ~f:(fun acc element->
       let frame=
         match element with
-        | Stroke fstroke-> fstroke.sframe
-        | SubGsd subgsd-> subgsd.gframe
+        | Stroke framted_stroke-> framted_stroke.stroke_frame
+        | SubGsd subgsd-> subgsd.gsd_frame
       in
       let x= min acc.x frame.x
       and y= min acc.y frame.y in
@@ -1611,7 +1615,31 @@ let gsd_frame gsd=
         x; y; width; height;
       })
 
-let calc_size gsd: size=
+let gsd_frame gsd=
+  ListLabels.fold_left gsd.elements
+    ~init:frame_zero
+    ~f:(fun acc element->
+      let frame=
+        match element with
+        | Stroke framted_stroke-> framted_stroke.stroke_frame
+        | SubGsd subgsd-> subgsd.gsd_frame
+      in
+      let x= min acc.x frame.x
+      and y= min acc.y frame.y in
+      let max_x= max (acc.x+.acc.width) (frame.x+.frame.width)
+      and max_y= max (acc.y+.acc.height) (frame.y+.frame.height) in
+      let width= max_x-.x |> max 1.
+      and height= max_y-.y |> max 1. in
+      {
+        x; y; width; height;
+      })
+
+let frame_size (frame:frame): size=
+  let width= frame.width
+  and height= frame.height in
+  { width; height }
+
+let gsd_size gsd: size=
   let frame= gsd_frame gsd in
   let width= frame.width
   and height= frame.height in
@@ -1632,15 +1660,15 @@ and string_of_element ?(indent=0) elem=
   | Stroke stroke-> indent_str ^ (Stroke.to_string stroke.stroke)
   | SubGsd subgsd->
     let gsd= string_of_gsd ~indent:(indent+2) subgsd.gsd
-    and frame= frame_to_string subgsd.gframe in
+    and frame= frame_to_string subgsd.gsd_frame in
     sprintf "%s{ frame: %s; gsd:\n%s\n%s}" indent_str frame gsd indent_str
 
 let rec load_file ~dir ?(filename="default.xml") code_point=
   let ( / ) = Filename.concat in
   let gsd_raw= Raw.load_file (dir / path_of_code_point code_point / filename) in
   let elements= gsd_raw.elements |> List.map (function
-    | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gframe= ref.frame }
-    | Raw.Stroke stroke-> Stroke { stroke; sframe= Stroke_black.to_frame_raw stroke }
+    | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gsd_frame= ref.frame }
+    | Raw.Stroke stroke-> Stroke { stroke; stroke_frame= Stroke_black.to_frame_raw stroke }
     )
   in
   {
@@ -1655,8 +1683,8 @@ let rec load_file ~dir ?(filename="default.xml") code_point=
 let of_string ~dir ?(filename="default.xml") string=
   let gsd_raw= Raw.of_string string in
   let elements= gsd_raw.elements |> List.map (function
-    | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gframe= ref.frame }
-    | Raw.Stroke stroke-> Stroke { stroke; sframe= Stroke.to_frame_raw stroke }
+    | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gsd_frame= ref.frame }
+    | Raw.Stroke stroke-> Stroke { stroke; stroke_frame= Stroke.to_frame_raw stroke }
     )
   in
   {
@@ -1688,23 +1716,24 @@ let rec gsd_flatten ?(pos_ratio=pos_ratio_default) gsd=
     gsd.elements
     ~f:(fun element->
       match element with
-      | Stroke fstroke-> [{ fstroke with sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe}]
+      | Stroke framted_stroke-> [{ framted_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame}]
       | SubGsd subgsd->
-        let size= calc_size subgsd.gsd in
+        let size= gsd_size subgsd.gsd in
         let ratio= {
-          ratio_x= subgsd.gframe.width /. size.width;
-          ratio_y= subgsd.gframe.height /. size.height;
+          ratio_x= subgsd.gsd_frame.width /. size.width;
+          ratio_y= subgsd.gsd_frame.height /. size.height;
         } in
         let ratio_final= {
           ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
           ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
         } in
         let pos_x=
-          subgsd.gframe.x
+          subgsd.gsd_frame.x
             *. pos_ratio.ratio.ratio_x
             +. pos_ratio.pos.pos_x
         and pos_y=
-          subgsd.gframe.y
+          subgsd.gsd_frame.y
             *. pos_ratio.ratio.ratio_y
             +. pos_ratio.pos.pos_y
         in
@@ -1733,10 +1762,10 @@ let svg_of_stroke ~to_path stroke=
   in
   svg
 
-let fstroke_to_stroke fstroke=
-  let target= fstroke.sframe in
-  let frame= Stroke.to_frame_raw fstroke.stroke in
-  let stroke= fstroke.stroke in
+let framted_stroke_to_stroke framted_stroke=
+  let target= framted_stroke.stroke_frame in
+  let frame= Stroke.to_frame_raw framted_stroke.stroke in
+  let stroke= framted_stroke.stroke in
   let origin= Point.{ x= target.x; y= target.y } in
   let d= Point.{ x= target.x -. frame.x; y= target.y -. frame.y } in
   let r= Point.{ x= target.width /. frame.width; y= target.height /. frame.height } in
@@ -1758,7 +1787,8 @@ let svg_of_gsd ~to_path gsd=
   let viewBox= Smaji_glyph_path.Svg.ViewBox.{ min_x= 0.; min_y= 0.; width= 0.; height= 0.; }
   and paths= [gsd
     |> gsd_flatten
-    |> List.map (fun fstroke-> fstroke |> fstroke_to_stroke |> to_path |> Svg.Svg_path.sub_of_path)
+    |> List.map (fun framted_stroke-> framted_stroke
+      |> framted_stroke_to_stroke |> to_path |> Svg.Svg_path.sub_of_path)
     ]
   in
   let svg= Smaji_glyph_path.Svg.{ viewBox; paths } in
@@ -1778,12 +1808,12 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
     | Stroke.Outline_path _-> sprintf "%s<path d=\"\n%s\n%s\"\n%s/>"
   in
   let to_path, first_indent, wrap=
-    let w= Utils.string_of_float (frame.x +. frame.width +. padding*.2.)
-    and h= Utils.string_of_float (frame.y +. frame.height +. padding*.2.) in
+    let w= string_of_float (frame.x +. frame.width +. padding*.2.)
+    and h= string_of_float (frame.y +. frame.height +. padding*.2.) in
     match to_path with
     | Stroke.Stroke_path f-> ((fun t-> [f t]), 4,
       sprintf
-        "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n  <g stroke=\"black\" stroke-width=\"%s\">\n%s\n  </g>\n%s</svg>" w h (Utils.string_of_float width)
+        "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n  <g stroke=\"black\" stroke-width=\"%s\">\n%s\n  </g>\n%s</svg>" w h (string_of_float width)
       )
     | Stroke.Outline_path f-> (f ~width, 2,
       sprintf
@@ -1801,13 +1831,13 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
     let indent_str0= String.make indent ' ' in
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke fstroke->
-        let fstroke= { fstroke with
-          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+      | Stroke framted_stroke->
+        let framted_stroke= { framted_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
         }
         in
-        fstroke
-          |> fstroke_to_stroke
+        framted_stroke
+          |> framted_stroke_to_stroke
           |> to_path
           |> List.map Svg.Svg_path.sub_of_path
           |> List.map (Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(elem_indent+2))
@@ -1818,21 +1848,21 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
             elem_indent_str1
             elem_indent_str0
       | SubGsd subgsd->
-        let size= calc_size subgsd.gsd in
+        let size= gsd_size subgsd.gsd in
         let ratio= {
-          ratio_x= subgsd.gframe.width /. size.width;
-          ratio_y= subgsd.gframe.height /. size.height;
+          ratio_x= subgsd.gsd_frame.width /. size.width;
+          ratio_y= subgsd.gsd_frame.height /. size.height;
         } in
         let ratio_final= {
           ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
           ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
         } in
         let pos_x=
-          subgsd.gframe.x
+          subgsd.gsd_frame.x
             *. pos_ratio.ratio.ratio_x
             +. pos_ratio.pos.pos_x
         and pos_y=
-          subgsd.gframe.y
+          subgsd.gsd_frame.y
             *. pos_ratio.ratio.ratio_y
             +. pos_ratio.pos.pos_y
         in
@@ -1851,10 +1881,10 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
 
     let transform=
       let x= sprintf "translate(%s 0)"
-        (Utils.string_of_float
+        (string_of_float
           (-. size.width -. pos_ratio.pos.pos_x))
       and y= sprintf "translate(0 %s)"
-        (Utils.string_of_float
+        (string_of_float
           (-. size.height -. pos_ratio.pos.pos_y))
       in
       match gsd.transform with
@@ -2349,7 +2379,7 @@ let stroke_samples=
         version_minor= 0;
         code_point= (0,0);
         transform= NoTransform;
-        elements= [Stroke { stroke; sframe= Stroke.to_frame stroke }];
+        elements= [Stroke { stroke; stroke_frame= Stroke.to_frame stroke }];
       } in
       let svg= outline_svg_of_gsd ~padding:8. ~weight:"8" gsd in
       Out_channel.(with_open_text
@@ -2372,14 +2402,14 @@ let outline_glif_of_gsd ~width ~to_path gsd=
   let glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke fstroke->
-        let fstroke= { fstroke with
-          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+      | Stroke framted_stroke->
+        let framted_stroke= { framted_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
         }
         in
         let contours=
-          fstroke
-            |> fstroke_to_stroke
+          framted_stroke
+            |> framted_stroke_to_stroke
             |> to_path
             |> List.map Glif.points_of_path
             |> List.map (fun points->
@@ -2390,22 +2420,22 @@ let outline_glif_of_gsd ~width ~to_path gsd=
         in
         contours
       | SubGsd subgsd->
-        let size= calc_size subgsd.gsd in
+        let size= gsd_size subgsd.gsd in
         let base= Some (string_of_code_point subgsd.gsd.code_point) in
         let ratio= {
-          ratio_x= subgsd.gframe.width /. size.width;
-          ratio_y= subgsd.gframe.height /. size.height;
+          ratio_x= subgsd.gsd_frame.width /. size.width;
+          ratio_y= subgsd.gsd_frame.height /. size.height;
         } in
         let ratio_final= {
           ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
           ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
         } in
         let pos_x=
-          subgsd.gframe.x
+          subgsd.gsd_frame.x
             *. pos_ratio.ratio.ratio_x
             +. pos_ratio.pos.pos_x
         and pos_y=
-          subgsd.gframe.y
+          subgsd.gsd_frame.y
             *. pos_ratio.ratio.ratio_y
             +. pos_ratio.pos.pos_y
         in
@@ -2427,7 +2457,7 @@ let outline_glif_of_gsd ~width ~to_path gsd=
     elements |> List.concat;
   in
   let glif_of_gsd ?(wrapped=true) gsd=
-    let size= calc_size gsd in
+    let size= gsd_size gsd in
     let name=
       let base= string_of_code_point gsd.code_point in
       if wrapped then
@@ -2451,7 +2481,7 @@ let outline_glif_of_gsd ~width ~to_path gsd=
     }
   in
   let transform_wrap gsd=
-    let size= calc_size gsd in
+    let size= gsd_size gsd in
     let code_point= gsd.code_point in
     let wrap=
       let xScale, yScale, xOffset, yOffset=
@@ -2515,13 +2545,13 @@ let flatten_glif_of_gsd ~width ~to_path gsd=
   let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke fstroke->
-        let fstroke= { fstroke with
-          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+      | Stroke framted_stroke->
+        let framted_stroke= { framted_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
         }
         in
-        fstroke
-          |> fstroke_to_stroke
+        framted_stroke
+          |> framted_stroke_to_stroke
           |> to_path
           |> List.map (fun path->
             let points= Glif.points_of_path path in
@@ -2530,21 +2560,21 @@ let flatten_glif_of_gsd ~width ~to_path gsd=
               points;
             })
       | SubGsd subgsd->
-        let size= calc_size subgsd.gsd in
+        let size= gsd_size subgsd.gsd in
         let ratio= {
-          ratio_x= subgsd.gframe.width /. size.width;
-          ratio_y= subgsd.gframe.height /. size.height;
+          ratio_x= subgsd.gsd_frame.width /. size.width;
+          ratio_y= subgsd.gsd_frame.height /. size.height;
         } in
         let ratio_final= {
           ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
           ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
         } in
         let pos_x=
-          subgsd.gframe.x
+          subgsd.gsd_frame.x
             *. pos_ratio.ratio.ratio_x
             +. pos_ratio.pos.pos_x
         and pos_y=
-          subgsd.gframe.y
+          subgsd.gsd_frame.y
             *. pos_ratio.ratio.ratio_y
             +. pos_ratio.pos.pos_y
         in
@@ -2557,7 +2587,7 @@ let flatten_glif_of_gsd ~width ~to_path gsd=
     List.concat elements;
   in
   let glif_of_gsd ?(wrapped=true) gsd=
-    let size= calc_size gsd in
+    let size= gsd_size gsd in
     let name=
       let base= string_of_code_point gsd.code_point in
       if wrapped then
@@ -2595,14 +2625,14 @@ let outline_glif_of_gsd gsd=
   let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke fstroke->
-        let fstroke= { fstroke with
-          sframe= pos_ratio_adjust ~pos_ratio fstroke.sframe
+      | Stroke framted_stroke->
+        let framted_stroke= { framted_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
         }
         in
         let points=
-          fstroke
-            |> fstroke_to_stroke
+          framted_stroke
+            |> framted_stroke_to_stroke
             |> Stroke.to_path
             |> Glif.points_of_path
         in
@@ -2613,19 +2643,19 @@ let outline_glif_of_gsd gsd=
       | SubGsd subgsd->
         let size= calc_size subgsd.gsd in
         let ratio= {
-          ratio_x= subgsd.gframe.width /. size.width;
-          ratio_y= subgsd.gframe.height /. size.height;
+          ratio_x= subgsd.gsd_frame.width /. size.width;
+          ratio_y= subgsd.gsd_frame.height /. size.height;
         } in
         let ratio_final= {
           ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
           ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
         } in
         let pos_x=
-          subgsd.gframe.x
+          subgsd.gsd_frame.x
             *. pos_ratio.ratio.ratio_x
             +. pos_ratio.pos.pos_x
         and pos_y=
-          subgsd.gframe.y
+          subgsd.gsd_frame.y
             *. pos_ratio.ratio.ratio_y
             +. pos_ratio.pos.pos_y
         in

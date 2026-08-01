@@ -8,6 +8,8 @@
  * This file is a part of Smaji_gsd.
  *)
 
+open! Smaji_glyph_path.Bugfix
+
 type path= string
 
 type t=

@@ -9,6 +9,8 @@
  *)
 
 
+open! Smaji_glyph_path.Bugfix
+
 module Tag = struct
   type t =
     | S_h     (* Horizontal *)
