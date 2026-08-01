@@ -79,30 +79,128 @@ let frame_zero= {
 
 type stroke= Stroke.t
 
+type transform=
+  | NoTransform
+  | MirrorHorizontal
+  | MirrorVertical
+  | Rotate180
+
+let transform_of_string= function
+  | "" | "none"-> NoTransform
+  | "mirror_horizontal"-> MirrorHorizontal
+  | "mirror_vertical"-> MirrorVertical
+  | "rotate180"-> Rotate180
+  | _-> failwith "transform_of_string"
+let string_of_transform= function
+  | NoTransform-> "none"
+  | MirrorHorizontal-> "mirror_horizontal"
+  | MirrorVertical-> "mirror_vertical"
+  | Rotate180-> "rotate180"
+
+let reduce_transform t1 t2=
+  match t1, t2 with
+  | NoTransform, t2-> t2
+  | t1, NoTransform-> t1
+
+  | MirrorHorizontal, MirrorHorizontal-> NoTransform
+  | MirrorHorizontal, MirrorVertical-> Rotate180
+  | MirrorHorizontal, Rotate180-> MirrorVertical
+
+  | MirrorVertical, MirrorHorizontal-> Rotate180
+  | MirrorVertical, MirrorVertical-> NoTransform
+  | MirrorVertical, Rotate180-> MirrorHorizontal
+
+  | Rotate180, MirrorHorizontal-> MirrorVertical
+  | Rotate180, MirrorVertical-> MirrorHorizontal
+  | Rotate180, Rotate180-> NoTransform
+
+let reduce_transforms l=
+  let[@tail_mod_cons] rec reduce l=
+    match l with
+    | []-> []
+    | [_]-> l
+    | t1::t2::tl-> reduce (reduce_transform t1 t2 :: tl)
+  in
+  reduce l
+
 type pos= {
   pos_x: float;
   pos_y: float;
 }
+
 type ratio= {
   ratio_x: float;
   ratio_y: float;
 }
+
 type pos_ratio= {
   pos: pos;
   ratio: ratio;
 }
+
 let pos_ratio_default= {
   pos= {pos_x=0.;pos_y=0.};
   ratio= {ratio_x=1.;ratio_y=1.};
 }
 
-let pos_ratio_adjust ~pos_ratio frame=
+type pos_ratio_transform= {
+  pos: pos;
+  ratio: ratio;
+  transform: transform;
+}
+
+let pos_ratio_transform_default= {
+  pos= {pos_x=0.;pos_y=0.};
+  ratio= {ratio_x=1.;ratio_y=1.};
+  transform= NoTransform;
+}
+
+let pos_ratio_adjust ~(pos_ratio:pos_ratio) frame=
   let pos= pos_ratio.pos
   and ratio= pos_ratio.ratio in
   let x= frame.x *. ratio.ratio_x +. pos.pos_x
   and y= frame.y *. ratio.ratio_y +. pos.pos_y
   and width= frame.width *. ratio.ratio_x
   and height= frame.height *. ratio.ratio_y in
+  let (x, width )=
+    if width < 1. then
+      let d= 1. -. width in
+      (x -. d, width +. d)
+    else
+      (x, width)
+  and (y, height )=
+    if height < 1. then
+      let d= 1. -. height in
+      (y -. d, height +. d)
+    else
+      (y, height)
+  in
+  { x; y; width; height }
+
+let pos_ratio_transform_adjust ~(pos_ratio_transform:pos_ratio_transform) ~container frame=
+  let pos= pos_ratio_transform.pos
+  and ratio= pos_ratio_transform.ratio
+  and transform= pos_ratio_transform.transform in
+  let x= frame.x *. ratio.ratio_x +. pos.pos_x
+  and y= frame.y *. ratio.ratio_y +. pos.pos_y
+  and width= frame.width *. ratio.ratio_x
+  and height= frame.height *. ratio.ratio_y in
+  let center_x= (container.x +. container.width) /. 2. in
+  let center_y= (container.y +. container.height) /. 2. in
+  let (x, y) =
+    match transform with
+    | NoTransform-> (x, y)
+    | MirrorHorizontal->
+      let x= center_x +. (center_x -. x) -. width in
+      (x, y)
+    | MirrorVertical->
+      let y= center_y +. (center_y -. y) -. height in
+      (x, y)
+    | Rotate180->
+      let x= center_x +. (center_x -. x) -. width in
+      let y= center_y +. (center_y -. y) -. height in
+      (x, y)
+  in
   let (x, width )=
     if width < 1. then
       let d= 1. -. width in
@@ -198,40 +296,6 @@ let version_of_string str=
   | c::e::_-> (int_of_string c, int_of_string e)
   | c::_-> (int_of_string c,0)
   | []-> failwith "version_of_string"
-
-type transform=
-  | NoTransform
-  | MirrorHorizontal
-  | MirrorVertical
-  | Rotate180
-
-let transform_of_string= function
-  | "" | "none"-> NoTransform
-  | "mirror_horizontal"-> MirrorHorizontal
-  | "mirror_vertical"-> MirrorVertical
-  | "rotate180"-> Rotate180
-  | _-> failwith "transform_of_string"
-let string_of_transform= function
-  | NoTransform-> "none"
-  | MirrorHorizontal-> "mirror_horizontal"
-  | MirrorVertical-> "mirror_vertical"
-  | Rotate180-> "rotate180"
-
-let reduce_transforms l=
-  let[@tail_mod_cons] rec reduce l=
-    match l with
-    | []-> []
-    | [_]-> l
-    | MirrorHorizontal::MirrorHorizontal::tl-> reduce tl
-    | MirrorVertical::MirrorVertical::tl-> reduce tl
-    | Rotate180::Rotate180::tl-> reduce tl
-    | MirrorHorizontal::MirrorVertical::tl->
-      Rotate180::tl |> List.sort compare |> reduce
-    | MirrorVertical::MirrorHorizontal::tl->
-      Rotate180::tl |> List.sort compare |> reduce
-    | hd::tl-> hd :: reduce tl
-  in
-  l |> List.sort compare |> reduce
 
 module Raw = struct
   type ref= {
@@ -1591,7 +1655,7 @@ type gsd= {
   comment: string;
 }
 and subgsd= { gsd: gsd; gsd_frame: frame }
-and framed_stroke= { stroke: stroke; stroke_frame: frame }
+and framed_stroke= { stroke: stroke; stroke_frame: frame; stroke_transform: transform; }
 and element=
   | Stroke of framed_stroke
   | SubGsd of subgsd
@@ -1602,7 +1666,7 @@ let gsd_bestfit gsd=
     ~f:(fun acc element->
       let frame=
         match element with
-        | Stroke framted_stroke-> framted_stroke.stroke_frame
+        | Stroke framed_stroke-> framed_stroke.stroke_frame
         | SubGsd subgsd-> subgsd.gsd_frame
       in
       let x= min acc.x frame.x
@@ -1621,7 +1685,7 @@ let gsd_frame gsd=
     ~f:(fun acc element->
       let frame=
         match element with
-        | Stroke framted_stroke-> framted_stroke.stroke_frame
+        | Stroke framed_stroke-> framed_stroke.stroke_frame
         | SubGsd subgsd-> subgsd.gsd_frame
       in
       let x= min acc.x frame.x
@@ -1668,7 +1732,7 @@ let rec load_file ~dir ?(filename="default.xml") code_point=
   let gsd_raw= Raw.load_file (dir / path_of_code_point code_point / filename) in
   let elements= gsd_raw.elements |> List.map (function
     | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gsd_frame= ref.frame }
-    | Raw.Stroke stroke-> Stroke { stroke; stroke_frame= Stroke_black.to_frame_raw stroke }
+    | Raw.Stroke stroke-> Stroke { stroke; stroke_frame= Stroke_black.to_frame_raw stroke; stroke_transform= NoTransform }
     )
   in
   {
@@ -1684,7 +1748,7 @@ let of_string ~dir ?(filename="default.xml") string=
   let gsd_raw= Raw.of_string string in
   let elements= gsd_raw.elements |> List.map (function
     | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gsd_frame= ref.frame }
-    | Raw.Stroke stroke-> Stroke { stroke; stroke_frame= Stroke.to_frame_raw stroke }
+    | Raw.Stroke stroke-> Stroke { stroke; stroke_frame= Stroke.to_frame_raw stroke; stroke_transform= NoTransform }
     )
   in
   {
@@ -1708,40 +1772,46 @@ let pos_ratio_adjust ~(pos_ratio:pos_ratio) stroke=
 *)
 
 (** Return the svg outline of the gsd. Note: this function only works with gsd without any transformed Components inside, or an Invalid_argument exception is raised *)
-let rec gsd_flatten ?(pos_ratio=pos_ratio_default) gsd=
-  match gsd.transform with
-  | MirrorHorizontal | MirrorVertical | Rotate180-> invalid_arg "transform"
-  | NoTransform->
+let rec gsd_flatten ?(pos_ratio_transform=pos_ratio_transform_default) gsd=
+  let pos= pos_ratio_transform.pos
+  and ratio= pos_ratio_transform.ratio
+  and transform= reduce_transform pos_ratio_transform.transform gsd.transform in
+  let pos_ratio= {
+    pos;
+    ratio;
+  } in
+  let container= pos_ratio_adjust ~pos_ratio (gsd_frame gsd) in
   let elements= ListLabels.map
     gsd.elements
     ~f:(fun element->
       match element with
-      | Stroke framted_stroke-> [{ framted_stroke with
-          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame}]
+      | Stroke stroke->
+        let stroke_frame= stroke.stroke_frame
+          |> pos_ratio_transform_adjust ~pos_ratio_transform ~container
+        in
+        [{ stroke with stroke_frame; stroke_transform= transform }]
       | SubGsd subgsd->
-        let size= gsd_size subgsd.gsd in
-        let ratio= {
+        let frame= gsd_frame subgsd.gsd in
+        let size= frame_size frame in
+        let subgsd_ratio= {
           ratio_x= subgsd.gsd_frame.width /. size.width;
           ratio_y= subgsd.gsd_frame.height /. size.height;
         } in
-        let ratio_final= {
-          ratio_x= ratio.ratio_x *. pos_ratio.ratio.ratio_x;
-          ratio_y= ratio.ratio_y *. pos_ratio.ratio.ratio_y;
+        let ratio_chain= {
+          ratio_x= subgsd_ratio.ratio_x *. pos_ratio.ratio.ratio_x;
+          ratio_y= subgsd_ratio.ratio_y *. pos_ratio.ratio.ratio_y;
         } in
-        let pos_x=
-          subgsd.gsd_frame.x
-            *. pos_ratio.ratio.ratio_x
-            +. pos_ratio.pos.pos_x
-        and pos_y=
-          subgsd.gsd_frame.y
-            *. pos_ratio.ratio.ratio_y
-            +. pos_ratio.pos.pos_y
-        in
-        let pos_ratio= {
-          pos= {pos_x; pos_y};
-          ratio= ratio_final;
+        let frame_chain= pos_ratio_transform_adjust ~pos_ratio_transform ~container frame in
+        let pos_chain:pos= {
+          pos_x= frame_chain.x;
+          pos_y= frame_chain.y;
         } in
-        gsd_flatten ~pos_ratio subgsd.gsd)
+        let pos_ratio_transform= {
+          pos= pos_chain;
+          ratio= ratio_chain;
+          transform;
+        } in
+        gsd_flatten ~pos_ratio_transform subgsd.gsd)
   in
   List.concat elements
 
@@ -1762,10 +1832,10 @@ let svg_of_stroke ~to_path stroke=
   in
   svg
 
-let framted_stroke_to_stroke framted_stroke=
-  let target= framted_stroke.stroke_frame in
-  let frame= Stroke.to_frame_raw framted_stroke.stroke in
-  let stroke= framted_stroke.stroke in
+let framed_stroke_to_stroke framed_stroke=
+  let target= framed_stroke.stroke_frame in
+  let frame= Stroke.to_frame_raw framed_stroke.stroke in
+  let stroke= framed_stroke.stroke in
   let origin= Point.{ x= target.x; y= target.y } in
   let d= Point.{ x= target.x -. frame.x; y= target.y -. frame.y } in
   let r= Point.{ x= target.width /. frame.width; y= target.height /. frame.height } in
@@ -1787,8 +1857,8 @@ let svg_of_gsd ~to_path gsd=
   let viewBox= Smaji_glyph_path.Svg.ViewBox.{ min_x= 0.; min_y= 0.; width= 0.; height= 0.; }
   and paths= [gsd
     |> gsd_flatten
-    |> List.map (fun framted_stroke-> framted_stroke
-      |> framted_stroke_to_stroke |> to_path |> Svg.Svg_path.sub_of_path)
+    |> List.map (fun framed_stroke-> framed_stroke
+      |> framed_stroke_to_stroke |> to_path |> Svg.Svg_path.sub_of_path)
     ]
   in
   let svg= Smaji_glyph_path.Svg.{ viewBox; paths } in
@@ -1831,13 +1901,13 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
     let indent_str0= String.make indent ' ' in
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke framted_stroke->
-        let framted_stroke= { framted_stroke with
-          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
+      | Stroke framed_stroke->
+        let framed_stroke= { framed_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framed_stroke.stroke_frame
         }
         in
-        framted_stroke
-          |> framted_stroke_to_stroke
+        framed_stroke
+          |> framed_stroke_to_stroke
           |> to_path
           |> List.map Svg.Svg_path.sub_of_path
           |> List.map (Svg.Svg_path.sub_to_string_svg ~close:false ~indent:(elem_indent+2))
@@ -2402,14 +2472,14 @@ let outline_glif_of_gsd ~width ~to_path gsd=
   let glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke framted_stroke->
-        let framted_stroke= { framted_stroke with
-          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
+      | Stroke framed_stroke->
+        let framed_stroke= { framed_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framed_stroke.stroke_frame
         }
         in
         let contours=
-          framted_stroke
-            |> framted_stroke_to_stroke
+          framed_stroke
+            |> framed_stroke_to_stroke
             |> to_path
             |> List.map Glif.points_of_path
             |> List.map (fun points->
@@ -2545,13 +2615,13 @@ let flatten_glif_of_gsd ~width ~to_path gsd=
   let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke framted_stroke->
-        let framted_stroke= { framted_stroke with
-          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
+      | Stroke framed_stroke->
+        let framed_stroke= { framed_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framed_stroke.stroke_frame
         }
         in
-        framted_stroke
-          |> framted_stroke_to_stroke
+        framed_stroke
+          |> framed_stroke_to_stroke
           |> to_path
           |> List.map (fun path->
             let points= Glif.points_of_path path in
@@ -2625,14 +2695,14 @@ let outline_glif_of_gsd gsd=
   let rec glif_elts_of_gsd ?(pos_ratio=pos_ratio_default) gsd=
     let elements= ListLabels.map gsd.elements ~f:(fun element->
       match element with
-      | Stroke framted_stroke->
-        let framted_stroke= { framted_stroke with
-          stroke_frame= pos_ratio_adjust ~pos_ratio framted_stroke.stroke_frame
+      | Stroke framed_stroke->
+        let framed_stroke= { framed_stroke with
+          stroke_frame= pos_ratio_adjust ~pos_ratio framed_stroke.stroke_frame
         }
         in
         let points=
-          framted_stroke
-            |> framted_stroke_to_stroke
+          framed_stroke
+            |> framed_stroke_to_stroke
             |> Stroke.to_path
             |> Glif.points_of_path
         in
