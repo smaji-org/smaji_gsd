@@ -1820,7 +1820,7 @@ let svg_of_stroke ~to_path stroke=
     let sub= stroke |> to_path |> Smaji_glyph_path.Svg.Svg_path.sub_of_path in
     let svg_path= [sub] in
     let paths= [svg_path] in
-    let frame, _latest= Smaji_glyph_path.Svg.Svg_path.get_frame_sub sub in
+    let frame, _latest= Smaji_glyph_path.Svg.Svg_path.sub_frame sub in
     let viewBox= Smaji_glyph_path.Svg.ViewBox.{
       min_x= frame.x;
       min_y= frame.y;
@@ -1862,7 +1862,7 @@ let svg_of_gsd ~to_path gsd=
     ]
   in
   let svg= Smaji_glyph_path.Svg.{ viewBox; paths } in
-  Smaji_glyph_path.Svg.Adjust.viewBox_fitFrame_reset svg
+  Smaji_glyph_path.Svg.Adjust.viewBox_fit_frame_reset svg
 
 let outline_svg_of_gsd ?padding ~width ~to_path gsd=
   let frame= gsd_frame gsd in
