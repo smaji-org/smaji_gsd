@@ -1727,7 +1727,7 @@ and string_of_element ?(indent=0) elem=
     and frame= frame_to_string subgsd.gsd_frame in
     sprintf "%s{ frame: %s; gsd:\n%s\n%s}" indent_str frame gsd indent_str
 
-let rec load_file ~dir ?(filename="default.xml") code_point=
+let rec load_file ~dir ?(filename="default.gsd") code_point=
   let ( / ) = Filename.concat in
   let gsd_raw= Raw.load_file (dir / path_of_code_point code_point / filename) in
   let elements= gsd_raw.elements |> List.map (function
@@ -1744,7 +1744,7 @@ let rec load_file ~dir ?(filename="default.xml") code_point=
     comment= gsd_raw.comment;
   }
 
-let of_string ~dir ?(filename="default.xml") string=
+let of_string ~dir ?(filename="default.gsd") string=
   let gsd_raw= Raw.of_string string in
   let elements= gsd_raw.elements |> List.map (function
     | Raw.Ref ref-> SubGsd { gsd= load_file ~dir ~filename ref.code_point; gsd_frame= ref.frame }
