@@ -555,7 +555,7 @@ module To_path(Width : sig val width : float end) = struct
     and end'= wt.end_ in
     let height= end'.y -. start.y in
     let v_length= max width @@ get_adjust wt.v_length
-      ~f:(fun()-> height *. 0.4) in
+      ~f:(fun()-> height *. 0.35) in
     let vec_t= Ops.(end' - { start with y= start.y+.v_length}) in
     let angle_t= radian vec_t in
     let p1= Ops.(+) start {x=width*.1.4; y= width*.0.4} in
@@ -568,7 +568,8 @@ module To_path(Width : sig val width : float end) = struct
       let calc_ctrl= template_curve ~start:p3 ~end':r_end in
       let ctrl1= match wt.ctrl1 with
         | Auto->
-          let ctrl= calc_ctrl ~ratio:{x= 0.10; y= 0.5} in
+          let x= (v_length /. height) *. 0.3 in
+          let ctrl= calc_ctrl ~ratio:{x; y= 0.5} in
           let x= min ctrl.x p3.x in
           { ctrl with x }
         | Specify p-> Ops.(+) p @@
@@ -593,7 +594,8 @@ module To_path(Width : sig val width : float end) = struct
       let calc_ctrl= template_curve ~start:p5 ~end' in
       let ctrl1=get_adjust wt.ctrl1
         ~f:(fun ()->
-          let ctrl= calc_ctrl ~ratio:{x= 0.09; y= 0.5} in
+          let x= (v_length /. height) *. 0.28 in
+          let ctrl= calc_ctrl ~ratio:{x; y= 0.5} in
           let x= min ctrl.x p5.x in
           { ctrl with x })
       and ctrl2= get_adjust wt.ctrl2
