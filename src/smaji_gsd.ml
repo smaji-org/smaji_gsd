@@ -1866,20 +1866,21 @@ let svg_of_gsd ~to_path gsd=
 
 let outline_svg_of_gsd ?padding ~width ~to_path gsd=
   let frame= gsd_frame gsd in
-  let size= { width=frame.width; height= frame.height } in
   let padding= max 1. @@
     match padding with
     | Some padding-> padding
     | None-> width
   in
+  let size= { width=frame.width; height= frame.height } in
+  let padded_size= { width=size.width+.padding*.2.; height= size.height+.padding*.2. } in
   let gen_cmd=
     match to_path with
     | Stroke.Stroke_path _-> sprintf "%s<path fill=\"none\" d=\"\n%s\n%s\"\n%s/>"
     | Stroke.Outline_path _-> sprintf "%s<path d=\"\n%s\n%s\"\n%s/>"
   in
   let to_path, first_indent, wrap=
-    let w= string_of_float (frame.x +. frame.width +. padding*.2.)
-    and h= string_of_float (frame.y +. frame.height +. padding*.2.) in
+    let w= string_of_float padded_size.width
+    and h= string_of_float padded_size.height in
     match to_path with
     | Stroke.Stroke_path f-> ((fun t-> [f t]), 4,
       sprintf
@@ -1962,10 +1963,10 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
     let transform=
       let x= sprintf "translate(%s 0)"
         (string_of_float
-          (-. size.width -. pos_ratio.pos.pos_x))
+          (-. padded_size.width))
       and y= sprintf "translate(0 %s)"
         (string_of_float
-          (-. size.height -. pos_ratio.pos.pos_y))
+          (-. padded_size.height))
       in
       match gsd.transform with
       | NoTransform-> fun elements-> sprintf "%s" elements
