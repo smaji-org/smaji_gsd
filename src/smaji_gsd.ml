@@ -1890,7 +1890,17 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
         "<svg viewBox=\"0,0 %s,%s\" xmlns=\"http://www.w3.org/2000/svg\">\n%s\n%s</svg>" w h
       )
   in
-  let rec svg_of_gsd ?(indent=0) ?(pos_ratio=pos_ratio_default) gsd=
+  let rec svg_of_gsd ?(padding=0.) ?(indent=0) ?(pos_ratio=pos_ratio_default) gsd=
+    let pos_ratio=
+      match padding with
+      | 0.-> pos_ratio
+      | _->
+        let pos=
+          let orig= pos_ratio.pos in
+          { pos_x= orig.pos_x+.padding; pos_y= orig.pos_y+.padding}
+        in
+        {pos_ratio with pos}
+    in
     let elem_indent= indent +
       match gsd.transform with
       | NoTransform-> 0
@@ -1994,7 +2004,7 @@ let outline_svg_of_gsd ?padding ~width ~to_path gsd=
   in
   match gsd.version_major, gsd.version_minor with
   | (1, 0) ->
-    let svg_str= svg_of_gsd ~indent:first_indent gsd in
+    let svg_str= svg_of_gsd ~padding ~indent:first_indent gsd in
     let comment=
       match gsd.comment with ""-> "" | comment->
       let _dtd, comment= EzxmlmFix.from_string comment in
