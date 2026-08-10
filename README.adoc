@@ -1,4 +1,504 @@
 = Glyph Stroke Description
 
-Smaji GSD is a markup language, an XML schema, used to record glyph accurately.
+Smaji GSD is a markup language, an XML schema, designed to record glyph accurately. It provides a customizable, composable way to represent glyph strokes.
+
+It's an enhanced version of https://github.com/smaji-org/smaji_god[Smaji GOD], providing more advanced and additional customizable description capability.
+
+The Glyph Stroke Description (GSD) represents a single glyph. It differentiates between 63 types of strokes. Not only the position and size information is attributed, the trace detail of stroke is also accepted as sub elements. The design allows strokes and existing GSD data to be composited to form new GSD data. Precise, customizable, composable, that's GSD.
+
+
+The data structure of GSD:
+
+[source,]
+----
+gsd
+    glyph
+        stroke
+        reference
+        character
+    comment
+----
+
+
+== Formal definition
+
+The formal XML schema for GSD can be found at:
+
+https://cjkv.smaji.org/xml/1.0/xsd/gsd.xsd
+
+== Specification
+
+=== gsd: the top level element
+
+
+.Attributes
+[]
+|===
+|Name |Description |Required
+
+|version
+|The format version
+|Yes
+
+|===
+
+.Child elements
+[]
+|===
+|Name |Description |Required
+
+|glyph
+|May occur at most once
+|Yes
+
+|comment
+|May occur any number of times
+|No
+
+|===
+
+
+=== glyph: glyph description
+
+.Attributes
+[]
+|===
+|Name |Description |Required
+
+|unicode
+|Unicode code point. A variation selector can be appended, separated by a comma.
+|Yes
+
+|transform
+|Can be "none", "mirror_horizontal", "mirror_vertical" or "rotate180". The entire glyph is transformed according to this value.
+|No
+
+|===
+
+.Child elements
+[]
+|===
+|Name |Description |Required
+
+|stroke
+|May occur any number of times
+|No
+
+|ref
+|May occur any number of times
+|No
+
+|character
+|May occur any number of times
+|No
+
+|===
+
+=== stroke: stroke description
+
+.Description
+[]
+The stroke element represents a single stroke of the glyph. It is a choice of 63 different types of strokes. Each stroke type has its own set of parameters, typically involving start/end points and lengths/controls. Some stroke types also support "auto" adjustments for points and lengths.
+
+[#stroke_types]
+.63 different types of stroke
+[%collapsible]
+====
+[]
+----
+h     | Horizontal
+sh    | Slanted Horizontal
+u     | Upward horizontal
+du    | Dot – Upward horizontal
+v     | Vertical
+sv    | Slanted Vertical
+rsv   | Right Slanted Vertical
+t     | Throw
+ft    | Flat Throw
+wt    | Wilted Throw
+d     | Dot
+ed    | Extended Dot
+ld    | Left Dot
+wd    | Wilted Dot
+p     | Press
+up    | Upward horizontal – Press
+hp    | Horizontal – Press
+fp    | Flat Press
+ufp   | Upward horizontal – Flat Press
+c     | Clockwise curve
+a     | Anticlockwise curve
+o     | Oval
+hj    | Horizontal – J hook
+uj    | Upward horizontal – J hook
+ht    | Horizontal – Throw
+hsv   | Horizontal – Slanted Vertical
+hv    | Horizontal – Vertical
+hvj   | Horizontal – Vertical – J hook
+htj   | Horizontal – Throw – J hook
+utj   | Upward horizontal – Throw – J hook
+hvh   | Horizontal – Vertical – Horizontal
+hvu   | Horizontal – Vertical – Upward horizontal
+ha    | Horizontal – Anticlockwise curve
+haj   | Horizontal – Anticlockwise curve – J hook
+hpj   | Horizontal – Press – J hook
+htaj  | Horizontal – Throw – Anticlockwise curve – J hook
+htc   | Horizontal – Throw – Clockwise curve
+htht  | Horizontal – Throw – Horizontal – Throw
+htcj  | Horizontal – Throw – Clockwise curve – J hook
+hvhv  | Horizontal – Vertical – Horizontal – Vertical
+hthtj | Horizontal – Throw – Horizontal – Throw – J hook
+vu    | Vertical – Upward horizontal
+vh    | Vertical – Horizontal
+va    | Vertical – Anticlockwise curve
+vaj   | Vertical – Anticlockwise curve – J hook
+vhv   | Vertical – Horizontal – Vertical
+vht   | Vertical – Horizontal – Throw
+vhtj  | Vertical – Horizontal – Throw – J hook
+vj    | Vertical – J hook
+vc    | Vertical – Clockwise curve
+vcj   | Vertical – Clockwise curve – J hook
+tu    | Throw – Upward horizontal
+th    | Throw – Horizontal
+td    | Throw – Dot
+wtd   | Wilted Throw – Dot
+tht   | Throw – Horizontal – Throw
+thtj  | Throw – Horizontal – Throw – J hook
+tj    | Throw – J hook
+cj    | Clockwise curve – J hook
+fpj   | Flat Press – J hook
+pj    | Press – J hook
+thtaj | Throw – Horizontal – Throw – Anticlockwise curve – J hook
+tod   | Throw – Oval – Dot
+
+----
+====
+
+=== stroke types definition
+
+The following are the definitions for each stroke type. Each stroke element contains the following sequence of sub-elements:
+
+* `h`: start (point), length (length)
+* `sh`: start (point), end (point)
+* `u`: start (point), end (point)
+* `du`: start (point), dot (point_adjust), end (point)
+* `v`: start (point), length (length)
+* `sv`: start (point), length (length), width (length)
+* `rsv`: start (point), length (length), width (length)
+* `t`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `ft`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `wt`: start (point), length (length_adjust), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `d`: start (point), end (point_adjust)
+* `ed`: start (point), end (point_adjust)
+* `ld`: start (point), end (point_adjust)
+* `wd`: start (point), length (length_adjust)
+* `p`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `up`: start (point_adjust), p_start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `hp`: start (point), length (length), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `fp`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `ufp`: start (point_adjust), p_start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `c`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `a`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `o`: start (point), width (length), end (point)
+* `hj`: start (point), length (length), end (point_adjust)
+* `uj`: start (point), u_end (point), end (point_adjust)
+* `ht`: start (point), length (length), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `hsv`: start (point), length (length), end (point_adjust)
+* `hv`: start (point), h_length (length), v_length (length_adjust)
+* `hvj`: start (point), h_length (length), v_length (length_adjust), end (point_adjust)
+* `htj`: start (point), length (length), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), end (point_adjust)
+* `utj`: start (point), t_start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), end (point_adjust)
+* `hvh`: start (point), h1_length (length), v_length (length), h2_length (length)
+* `hvu`: start (point), h_length (length), v_length (length), end (point_adjust)
+* `ha`: start (point), h1_length (length), v_length (length), h2_length (length), a_radius (length_adjust)
+* `haj`: start (point), h1_length (length), v_length (length), h2_length (length), a_radius (length_adjust), end (point_adjust)
+* `hpj`: start (point), length (length), ctrl1 (point_adjust), ctrl2 (point_adjust), p_end (point), end (point_adjust)
+* `htaj`: start (point), h1_length (length), h2_length (length), a_end (point), a_radius (length_adjust), end (point_adjust)
+* `htc`: start (point), h_length (length), t_ctrl1 (point_adjust), t_ctrl2 (point_adjust), t_end (point), c_ctrl1 (point_adjust), c_ctrl2 (point_adjust), end (point)
+* `htht`: start (point), h1_length (length), t1_ctrl1 (point_adjust), t1_ctrl2 (point_adjust), t1_end (point), h2_length (length), t2_ctrl1 (point_adjust), t2_ctrl2 (point_adjust), end (point)
+* `htcj`: start (point), h_length (length), t_ctrl1 (point_adjust), t_ctrl2 (point_adjust), t_end (point), c_ctrl1 (point_adjust), c_ctrl2 (point_adjust), c_end (point), end (point_adjust)
+* `hvhv`: start (point), h1_length (length), v1_length (length), h2_length (length), v2_length (length)
+* `hthtj`: start (point), h1_length (length), t1_ctrl1 (point_adjust), t1_ctrl2 (point_adjust), t1_end (point), h2_length (length), t2_ctrl1 (point_adjust), t2_ctrl2 (point_adjust), t2_end (point), end (point_adjust)
+* `vu`: start (point), length (length), end (point_adjust)
+* `vh`: start (point), v_length (length), h_length (length)
+* `va`: start (point), v_length (length), h_length (length), a_radius (length_adjust)
+* `vaj`: start (point), v_length (length), h_length (length), a_radius (length_adjust), end (point_adjust)
+* `vhv`: start (point), v1_length (length), h_length (length), v2_length (length)
+* `vht`: start (point), v_length (length), h_length (length), ctrl1 (point_adjust), ctrl2 (point_adjust), end (point)
+* `vhtj`: start (point), v_length (length), h_length (length), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), end (point_adjust)
+* `vj`: start (point), length (length), end (point_adjust)
+* `vc`: start (point), v_length (length), h_length (length), a_radius (length_adjust)
+* `vcj`: start (point), v_length (length), h_length (length), a_radius (length_adjust), end (point_adjust)
+* `tu`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), end (point_adjust)
+* `th`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), length (length_adjust)
+* `td`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), end (point_adjust)
+* `wtd`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), end (point_adjust)
+* `tht`: start (point), t1_ctrl1 (point_adjust), t1_ctrl2 (point_adjust), t1_end (point), length (length), t2_ctrl1 (point_adjust), t2_ctrl2 (point_adjust), end (point)
+* `thtj`: start (point), t1_ctrl1 (point_adjust), t1_ctrl2 (point_adjust), t1_end (point), length (length), t2_ctrl1 (point_adjust), t2_ctrl2 (point_adjust), t2_end (point), end (point_adjust)
+* `tj`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), end (point_adjust)
+* `cj`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), c_end (point), end (point_adjust)
+* `fpj`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), p_end (point), end (point_adjust)
+* `pj`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), p_end (point), end (point_adjust)
+* `thtaj`: start (point), ctrl1 (point_adjust), ctrl2 (point_adjust), t_end (point), h1_length (length), h2_length (length), a_end (point), a_radius (length_adjust), end (point_adjust)
+* `tod`: start (point), ctrl1 (point_adjust), ctrl2 (length_adjust), bottom (point), ctrl3 (length_adjust), ctrl4 (length_adjust), left (point), end (point_adjust)
+
+=== ref: reference description
+
+
+.Attributes
+[]
+|===
+|Name |Description |Required
+
+|unicode
+|Unicode code point. A variation selector can be appended, separated by a comma.
+|Yes
+
+|x
+|The 'x' coordinate
+|Yes
+
+|y
+|The 'y' coordinate
+|Yes
+
+|width
+|The 'width' of the element
+|Yes
+
+|height
+|The 'height' of the element
+|Yes
+
+|===
+
+
+=== character: character description
+
+.Attributes
+[]
+|===
+|Name |Description |Required
+
+|utf8
+|UTF-8 encoded character
+|Yes
+
+|x
+|The 'x' coordinate
+|Yes
+
+|y
+|The 'y' coordinate
+|Yes
+
+|width
+|The 'width' of the element
+|Yes
+
+|height
+|The 'height' of the element
+|Yes
+
+|===
+
+== Samples
+
+=== Sample 1
+
+[source,xml]
+<?xml version="1.0"?>
+<gsd version="1.0"
+  xmlns="http://cjkv.smaji.org/ns/gsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://cjkv.smaji.org/ns/gsd https://cjkv.smaji.org/xml/1.0/xsd/gsd.xsd">
+<glyph unicode="516b">
+  <stroke>
+    <t>
+      <start x="50" y="16" />
+      <ctrl1><auto></auto></ctrl1>
+      <ctrl2><auto></auto></ctrl2>
+      <end x="4" y="78" />
+    </t>
+  </stroke>
+  <stroke>
+    <p>
+      <start x="64" y="4" />
+      <ctrl1><auto></auto></ctrl1>
+      <ctrl2><auto></auto></ctrl2>
+      <end x="120" y="80" />
+    </p>
+  </stroke>
+</glyph>
+</gsd>
+
+This GSD describes a glyph consisting of strokes purely: a throw (㇒) and a press (㇏).
+
+The specified schema location helps the text editor find the formal definition for editing completion and hinting.
+
+Simplified version:
+
+[source,xml]
+<gsd version="1.0">
+<glyph unicode="516b">
+  <stroke>
+    <t>
+      <start x="50" y="16" />
+      <ctrl1><auto></auto></ctrl1>
+      <ctrl2><auto></auto></ctrl2>
+      <end x="4" y="78" />
+    </t>
+  </stroke>
+  <stroke>
+    <p>
+      <start x="64" y="4" />
+      <ctrl1><auto></auto></ctrl1>
+      <ctrl2><auto></auto></ctrl2>
+      <end x="120" y="80" />
+    </p>
+  </stroke>
+</glyph>
+</gsd>
+
+The order of the children inside glyph element corresponds to the stroke order of the glyph.
+
+.Click here to view the generated glyph
+[%collapsible]
+====
+image::https://github.com/kandu/static/raw/master/smaji/cjkv/gsd/516b,0.outline.svg[]
+====
+
+
+=== Sample 2
+
+In sample 1, a glyph of character "八" is purely composed by strokes. In this sample, a glyph composed by an already exiting GSD and a stroke is illustrated.
+
+[source,xml]
+<gsd version="1.0">
+<glyph unicode="4e15">
+  <ref unicode= "4e0d" x="0" y="0" width="110" height="100"/>
+  <stroke>
+    <h>
+      <start x="0" y="110" />
+      <length is="110" />
+    </h>
+  </stroke>
+</glyph>
+</gsd>
+
+.Click here to view the generated glyph
+[%collapsible]
+====
+image::https://github.com/kandu/static/raw/master/smaji/cjkv/gsd/4e15,0.outline.svg[]
+====
+
+This GSD describes a glyph consisting of a glyph of unicode 4e0d, i.e. "不" above and a "Horizontal" stroke below. The result is a glyph of "丕".
+
+If there exists a variation of character "不" with unicode "4e0d,e0100", the GSD would be:
+
+[source,xml]
+<gsd version="1.0">
+<glyph unicode="4e15,0">
+  <ref unicode= "4e0d,e0100" x="0" y="0" width="110" height="100"/>
+  <stroke>
+    <h>
+      <start x="0" y="110" />
+      <length is="110" />
+    </h>
+  </stroke>
+</glyph>
+</gsd>
+
+The variation selector is appended to the original unicode value separated by a comma.
+
+=== Sample 3
+
+In sample 2, a glyph is composed by an exiting GSD and a stroke. The exiting GSD is referenced by un unambiguous unicode code point. However, "不" is such a common and unambiguous character that it can be typed directly:
+
+[source,xml]
+<gsd version="1.0">
+<glyph unicode="4e15,0">
+  <character utf8= "不" x="0" y="0" width="110" height="100"/>
+  <stroke>
+    <h>
+      <start x="0" y="110" />
+      <length is="110" />
+    </h>
+  </stroke>
+</glyph>
+</gsd>
+
+
+=== Sample 4
+
+[source,xml]
+<gsd version="1.0">
+  <glyph unicode="2010f,0" transform="rotate180">
+    <character utf8="了" x="0" y="0" width="60" height="85" />
+  </glyph>
+</gsd>
+
+.Click here to view the generated glyph
+[%collapsible]
+====
+image::https://github.com/kandu/static/raw/master/smaji/cjkv/gsd/2010f,0.outline.svg[]
+====
+
+This sample illustrates how to transform the glyph. The optional "transform" attribute applies transformation to the entire glyph. Available transformations include "mirror_horizontal", "mirror_vertical" and "rotate180".
+
+
+=== Sample 5
+
+[source,xml]
+<gsd version="1.0">
+<glyph unicode="0">
+  <stroke>
+    <hthtj>
+      <start x="0" y="0" />
+      <h1_length is="40" />
+      <t1_ctrl1><auto></auto></t1_ctrl1>
+      <t1_ctrl2><auto></auto></t1_ctrl2>
+      <t1_end x="24" y="30" />
+      <h2_length is="48" />
+      <t2_ctrl1><auto></auto></t2_ctrl1>
+      <t2_ctrl2><auto></auto></t2_ctrl2>
+      <t2_end x="56" y="80" />
+      <end><auto></auto></end>
+    </hthtj>
+  </stroke>
+</glyph>
+</gsd>
+
+.Click here to view the generated glyph
+[%collapsible]
+====
+image::https://github.com/kandu/static/raw/master/smaji/cjkv/gsd/hthtj_0.svg[]
+====
+
+[source,xml]
+<gsd version="1.0">
+<glyph unicode="0">
+  <stroke>
+    <hthtj>
+      <start x="0" y="0" />
+      <h1_length is="50" />
+      <t1_ctrl1><auto></auto></t1_ctrl1>
+      <t1_ctrl2><auto></auto></t1_ctrl2>
+      <t1_end x="35" y="24" />
+      <h2_length is="35" />
+      <t2_ctrl1><auto></auto></t2_ctrl1>
+      <t2_ctrl2><auto></auto></t2_ctrl2>
+      <t2_end x="40" y="60" />
+      <end><point x="25" y="50" /></end>
+    </hthtj>
+  </stroke>
+</glyph>
+</gsd>
+
+.Click here to view the generated glyph
+[%collapsible]
+====
+image::https://github.com/kandu/static/raw/master/smaji/cjkv/gsd/hthtj_1.svg[]
+====
+
+This sample illustrates how to perform custom stroke adjustments by point_adjust and length_adjust elements. sub-elements can be set to auto or a custom value to adjust the stroke's spatial position.
 
