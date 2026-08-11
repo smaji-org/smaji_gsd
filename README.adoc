@@ -7,7 +7,21 @@ It's an enhanced version of https://github.com/smaji-org/smaji_god[Smaji GOD], p
 The Glyph Stroke Description (GSD) represents a single glyph. It differentiates between 63 types of strokes. Not only the position and size information is attributed, the trace detail of stroke is also accepted as sub elements. The design allows strokes and existing GSD data to be composited to form new GSD data. Precise, customizable, composable, that's GSD.
 
 
-The data structure of GSD:
+== How it Works
+
+A `gsd` file is primarily composed of two types of elements:
+
+* Detailed specifications of individual strokes
+* References to existing `gsd` files
+
+Therefore, the organization of a gsd file involves arranging these two types of elements and defining their position, width and height to compose a glyph.
+
+== Output Formats
+
+* SVG font contour files
+* Glif font contour files
+
+== Data structure of GSD:
 
 [source,]
 ----
@@ -501,4 +515,24 @@ image::https://github.com/kandu/static/raw/master/smaji/cjkv/gsd/hthtj_1.svg[]
 ====
 
 This sample illustrates how to perform custom stroke adjustments by point_adjust and length_adjust elements. sub-elements can be set to auto or a custom value to adjust the stroke's spatial position.
+
+== Pros & Cons
+
+=== Pros
+
+* Granular control: Provides deep control over the entire writing process of each stroke, including start, end points, turning points, and curve variations.
+* Procedural generation: Strokes are generated procedurally, eliminating issues such as aspect ratio distortion or inconsistent stroke widths that compares to combining pre-made components.
+
+=== Cons
+
+* Style limitations: The library currently provides two pre-defined procedural styles: Black (looks like sans-serif) and Ming (looks like serif). While a plugin interface is available for custom procedural generation functions, adding new styles requires users to write their own procedural stroke generation functions.
+* Missing animation: Support for animating the procedural stroke generation process, although possible, is not yet provided.
+
+== Related Projects
+
+https://github.com/smaji-org/smaji_glyph_path[Smaji Glyph Path] A library to read, write and translate glyph path files.
+
+https://github.com/smaji-org/smaji_dyn_glyph[Smaji Dyn Glyph] A processor for parsing, generating and converting glyph files by leveraging `smaji_god` and `smaji_gsd`.
+
+https://github.com/smaji-org/smaji_god[Smaji Outline Description] Another glyph description markup language. While it lacks granular control over strokes, it is simpler to use and can generate glyph animation files.
 
